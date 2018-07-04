@@ -3,24 +3,15 @@ from traceback import print_exc
 from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
 from flask_httpauth import HTTPBasicAuth
-from volume_provider.settings import APP_USERNAME, APP_PASSWORD
+from volume_provider.settings import APP_USERNAME, APP_PASSWORD, \
+    MONGODB_PARAMS, MONGODB_DB
 from volume_provider.providers import get_provider_to
 
 
 app = Flask(__name__)
 auth = HTTPBasicAuth()
 cors = CORS(app)
-
-from volume_provider.settings import MONGODB_DB, MONGODB_HOST, MONGODB_PORT, \
-    MONGODB_USER, MONGODB_PWD, MONGODB_ENDPOINT
-if MONGODB_ENDPOINT:
-    connect(MONGODB_ENDPOINT, )
-else:
-    params = {
-        'host': MONGODB_HOST, 'port': MONGODB_PORT, 'db': MONGODB_DB,
-        'username': MONGODB_USER, 'password': MONGODB_PWD
-    }
-    connect(**params)
+connect(MONGODB_DB, **MONGODB_PARAMS)
 
 
 @auth.verify_password
@@ -51,6 +42,19 @@ def create_volume(provider_name, env):
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
     return response_created(uuid=volume.uuid)
+
+@app.route("/<string:provider_name>/<string:env>/volume/{string:uuid}", methods=['DELETE'])
+@auth.login_required
+def delete_volume(provider_name, env, uuid):
+    try:
+        provider_cls = get_provider_to(provider_name)
+        provider = provider_cls(env)
+        provider.delete_volume(uuid)
+    except Exception as e:  # TODO What can get wrong here?
+        print_exc()  # TODO Improve log
+        return response_invalid_request(str(e))
+    return response_ok()
+
 
 
 def response_invalid_request(error, status_code=500):

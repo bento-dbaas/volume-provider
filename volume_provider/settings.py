@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from os import getenv
 
 
@@ -8,6 +9,14 @@ MONGODB_USER = getenv("MONGODB_USER", None)
 MONGODB_PWD = getenv("MONGODB_PWD", None)
 MONGODB_ENDPOINT = getenv("DBAAS_MONGODB_ENDPOINT", None)
 
+MONGODB_PARAMS = {'document_class': OrderedDict}
+if MONGODB_ENDPOINT:
+    MONGODB_PARAMS["host"] = MONGODB_ENDPOINT
+else:
+    MONGODB_PARAMS['host'] = MONGODB_HOST
+    MONGODB_PARAMS['port'] = MONGODB_PORT
+    MONGODB_PARAMS['username'] = MONGODB_USER
+    MONGODB_PARAMS['password'] = MONGODB_PWD
 
 APP_USERNAME = getenv("APP_USERNAME", None)
 APP_PASSWORD = getenv("APP_PASSWORD", None)
