@@ -44,6 +44,6 @@ class CredentialAddFaaS(CredentialAdd):
 
     def valid_fields(self):
         return [
-            'environment', 'user', 'password', 'endpoint', 'is_secure',
+            'user', 'password', 'endpoint', 'is_secure', 'project',
             'category_id', 'access_type', 'token_endpoint', 'tenant_id'
         ]

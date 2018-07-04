@@ -50,7 +50,7 @@ def create_volume(provider_name, env):
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
-    return response_created(address=volume.uuid)
+    return response_created(uuid=volume.uuid)
 
 
 def response_invalid_request(error, status_code=500):

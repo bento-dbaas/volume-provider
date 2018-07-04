@@ -26,12 +26,13 @@ class ProviderFaaS(ProviderBase):
         volume.set_group(group)
 
         export = self.client.create_export(volume.size_kb, volume.resource_id)
-        info("Export created: {}".format(export))
         volume.identifier = export['id']
         volume.resource_id = export['resource_id']
         volume.path = export['full_path']
         volume.owner_address = to_address
         volume.save()
+
+        self.client.create_access(volume, to_address)
 
         return volume
 
