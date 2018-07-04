@@ -79,3 +79,10 @@ class ProviderBase(object):
 
     def _add_access(self, volume, to_address):
         raise NotImplementedError
+
+    def remove_access(self, uuid, to_address):
+        volume = Volume.objects(pk=uuid).get()
+        self._remove_access(volume, to_address)
+
+    def _remove_access(self, volume, to_address):
+        raise NotImplementedError

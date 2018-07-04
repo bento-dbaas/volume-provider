@@ -62,22 +62,22 @@ class FaaSClient(object):
             return True
 
         return self.execute(
-            self.client.access_delete, 200, export.id, access['id']
+            self.client.access_delete, 200, export.identifier, access['id']
         )
 
     def create_snapshot(self, export):
         return self.execute(
-            self.client.snapshot_create, 201, export.id
+            self.client.snapshot_create, 201, export.identifier
         )
 
     def delete_snapshot(self, export, snapshot):
         return self.execute(
-            self.client.snapshot_delete, 200, export.id, snapshot.id
+            self.client.snapshot_delete, 200, export.identifier, snapshot.id
         )
 
     def restore_snapshot(self, export, snapshot):
         return self.execute(
-            self.client.snapshot_restore, 200, export.id, snapshot.id
+            self.client.snapshot_restore, 200, export.identifier, snapshot.id
         )
 
     def wait_for_job_finished(self, job, attempts=50, interval=30):
@@ -88,9 +88,9 @@ class FaaSClient(object):
             sleep(interval)
 
     def get_export_size(self, export):
-        return self.execute(self.client.quota_get, 200, export.id)
+        return self.execute(self.client.quota_get, 200, export.identifier)
 
     def resize(self, export, new_size_kb):
         return self.execute(
-            self.client.quota_post, 200, export.id, new_size_kb
+            self.client.quota_post, 200, export.identifier, new_size_kb
         )

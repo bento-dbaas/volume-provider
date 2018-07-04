@@ -73,6 +73,18 @@ def add_volume_access(provider_name, env, uuid):
         return response_invalid_request(str(e))
     return response_ok()
 
+@app.route("/<string:provider_name>/<string:env>/access/<string:uuid>/<string:address>", methods=['DELETE'])
+@auth.login_required
+def remove_volume_access(provider_name, env, uuid, address):
+    try:
+        provider_cls = get_provider_to(provider_name)
+        provider = provider_cls(env)
+        provider.remove_access(uuid, address)
+    except Exception as e:  # TODO What can get wrong here?
+        print_exc()  # TODO Improve log
+        return response_invalid_request(str(e))
+    return response_ok()
+
 def response_invalid_request(error, status_code=500):
     return _response(status_code, error=error)
 
