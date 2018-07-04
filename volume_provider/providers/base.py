@@ -1,3 +1,6 @@
+from volume_provider.models import Volume
+
+
 class ProviderBase(object):
 
     def __init__(self, environment):
@@ -49,4 +52,22 @@ class ProviderBase(object):
         raise NotImplementedError
 
     def create_volume(self, group, size_kb, to_address):
+        volume = Volume()
+        volume.size_kb = size_kb
+        volume.set_group(group)
+        volume.owner_address = to_address
+        self._create_volume(volume)
+        volume.save()
+
+        return volume
+
+    def _create_volume(self, volume):
+        raise NotImplementedError
+
+    def delete_volume(self, uuid):
+        volume = Volume.objects(pk=uuid).get()
+        self._delete_volume(volume)
+        volume.delete()
+
+    def _delete_volume(self, volume):
         raise NotImplementedError

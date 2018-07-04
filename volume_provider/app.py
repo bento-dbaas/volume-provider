@@ -43,7 +43,8 @@ def create_volume(provider_name, env):
         return response_invalid_request(str(e))
     return response_created(uuid=volume.uuid)
 
-@app.route("/<string:provider_name>/<string:env>/volume/{string:uuid}", methods=['DELETE'])
+
+@app.route("/<string:provider_name>/<string:env>/volume/<string:uuid>", methods=['DELETE'])
 @auth.login_required
 def delete_volume(provider_name, env, uuid):
     try:
