@@ -57,6 +57,7 @@ class ProviderBase(object):
         volume.set_group(group)
         volume.owner_address = to_address
         self._create_volume(volume)
+        self._add_access(volume, volume.owner_address)
         volume.save()
 
         return volume
@@ -70,4 +71,11 @@ class ProviderBase(object):
         volume.delete()
 
     def _delete_volume(self, volume):
+        raise NotImplementedError
+
+    def add_access(self, uuid, to_address):
+        volume = Volume.objects(pk=uuid).get()
+        self._add_access(volume, to_address)
+
+    def _add_access(self, volume, to_address):
         raise NotImplementedError
