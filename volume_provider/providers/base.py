@@ -86,3 +86,12 @@ class ProviderBase(object):
 
     def _remove_access(self, volume, to_address):
         raise NotImplementedError
+
+    def resize(self, uuid, new_size_kb):
+        volume = Volume.objects(pk=uuid).get()
+        self._resize(volume, new_size_kb)
+        volume.size_kb = new_size_kb
+        volume.save()
+
+    def _resize(self, volume, new_size_kb):
+        raise NotImplementedError

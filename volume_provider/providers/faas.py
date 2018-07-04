@@ -32,3 +32,6 @@ class ProviderFaaS(ProviderBase):
 
     def _remove_access(self, volume, to_address):
         self.client.delete_access(volume, to_address)
+
+    def _resize(self, volume, new_size_kb):
+        self.client.resize(volume, new_size_kb)

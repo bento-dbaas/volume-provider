@@ -85,6 +85,24 @@ def remove_volume_access(provider_name, env, uuid, address):
         return response_invalid_request(str(e))
     return response_ok()
 
+@app.route("/<string:provider_name>/<string:env>/resize/<string:uuid>", methods=['POST'])
+@auth.login_required
+def resize_volume(provider_name, env, uuid):
+    data = request.get_json()
+    new_size_kb = data.get("new_size_kb", None)
+
+    if not new_size_kb:
+        return response_invalid_request("Invalid data {}".format(data))
+
+    try:
+        provider_cls = get_provider_to(provider_name)
+        provider = provider_cls(env)
+        provider.resize(uuid, new_size_kb)
+    except Exception as e:  # TODO What can get wrong here?
+        print_exc()  # TODO Improve log
+        return response_invalid_request(str(e))
+    return response_ok()
+
 def response_invalid_request(error, status_code=500):
     return _response(status_code, error=error)
 
