@@ -19,11 +19,12 @@ class CredentialMongoDB(object):
             params = {'document_class': OrderedDict}
             if MONGODB_ENDPOINT:
                 client = MongoClient(MONGODB_ENDPOINT, **params)
-            else:
+
                 params.update({
                     'host': MONGODB_HOST, 'port': MONGODB_PORT,
                     'username': MONGODB_USER, 'password': MONGODB_PWD
                 })
+            else:
                 client = MongoClient(**params)
             self._db = client[MONGODB_DB]
         return self._db
@@ -31,7 +32,7 @@ class CredentialMongoDB(object):
     @property
     def credential(self):
         if not self._collection_credential:
-            self._collection_credential = self.db["credential"]
+            self._collection_credential = self.db["credentials"]
         return self._collection_credential
 
     @property
