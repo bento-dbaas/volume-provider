@@ -47,3 +47,6 @@ class ProviderBase(object):
 
     def get_credential_add(self):
         raise NotImplementedError
+
+    def create_volume(self, group, size_kb, to_address):
+        raise NotImplementedError

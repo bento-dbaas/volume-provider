@@ -15,8 +15,8 @@ class FaaSClient(object):
             self._client = Client(
                 authurl=self.credential.endpoint,
                 user=self.credential.user, key=self.credential.password,
-                tenant_name=self.credential.tenant_name,
-                insecure=self.credential.is_secure
+                tenant_name=self.credential.project,
+                insecure=not self.credential.is_secure
             )
         return self._client
 
@@ -29,7 +29,7 @@ class FaaSClient(object):
 
     def create_export(self, size_kb, resource_id):
         status, content = self.client.export_create(
-            size_kb, self.credential.category, resource_id
+            size_kb, self.credential.category_id, resource_id
         )
         if status != 201:
             raise APIError(status, content)

@@ -4,10 +4,6 @@ from volume_provider.credentials.base import CredentialBase, CredentialAdd
 class CredentialFaaS(CredentialBase):
 
     @property
-    def environment(self):
-        return self.content['environment']
-
-    @property
     def user(self):
         return self.content['user']
 
@@ -18,6 +14,10 @@ class CredentialFaaS(CredentialBase):
     @property
     def endpoint(self):
         return self.content['endpoint']
+
+    @property
+    def project(self):
+        return self.content['project']
 
     @property
     def is_secure(self):
