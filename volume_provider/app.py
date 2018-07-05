@@ -103,6 +103,20 @@ def resize_volume(provider_name, env, uuid):
         return response_invalid_request(str(e))
     return response_ok()
 
+
+@app.route("/<string:provider_name>/<string:env>/snapshot/<string:uuid>", methods=['POST'])
+@auth.login_required
+def volume_snapshot(provider_name, env, uuid):
+    try:
+        provider_cls = get_provider_to(provider_name)
+        provider = provider_cls(env)
+        snapshot = provider.take_snapshot(uuid)
+    except Exception as e:  # TODO What can get wrong here?
+        print_exc()  # TODO Improve log
+        return response_invalid_request(str(e))
+    return response_created(uuid=snapshot.uuid)
+
+
 def response_invalid_request(error, status_code=500):
     return _response(status_code, error=error)
 

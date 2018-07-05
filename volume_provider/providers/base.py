@@ -1,4 +1,4 @@
-from volume_provider.models import Volume
+from volume_provider.models import Volume, Snapshot
 
 
 class ProviderBase(object):
@@ -94,4 +94,14 @@ class ProviderBase(object):
         volume.save()
 
     def _resize(self, volume, new_size_kb):
+        raise NotImplementedError
+
+    def take_snapshot(self, uuid):
+        volume = Volume.objects(pk=uuid).get()
+        snapshot = Snapshot(volume=volume)
+        self._take_snapshot(volume, snapshot)
+        snapshot.save()
+        return snapshot
+
+    def _take_snapshot(self, volume, snapshot):
         raise NotImplementedError
