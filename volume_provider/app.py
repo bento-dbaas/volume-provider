@@ -106,7 +106,7 @@ def resize_volume(provider_name, env, uuid):
 
 @app.route("/<string:provider_name>/<string:env>/snapshot/<string:uuid>", methods=['POST'])
 @auth.login_required
-def volume_snapshot(provider_name, env, uuid):
+def take_snapshot(provider_name, env, uuid):
     try:
         provider_cls = get_provider_to(provider_name)
         provider = provider_cls(env)
@@ -115,6 +115,19 @@ def volume_snapshot(provider_name, env, uuid):
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
     return response_created(uuid=snapshot.uuid)
+
+
+@app.route("/<string:provider_name>/<string:env>/snapshot/<string:uuid>", methods=['DELETE'])
+@auth.login_required
+def remove_snapshot(provider_name, env, uuid):
+    try:
+        provider_cls = get_provider_to(provider_name)
+        provider = provider_cls(env)
+        provider.remove_snapshot(uuid)
+    except Exception as e:  # TODO What can get wrong here?
+        print_exc()  # TODO Improve log
+        return response_invalid_request(str(e))
+    return response_ok()
 
 
 def response_invalid_request(error, status_code=500):

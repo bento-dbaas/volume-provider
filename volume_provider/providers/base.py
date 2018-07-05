@@ -105,3 +105,11 @@ class ProviderBase(object):
 
     def _take_snapshot(self, volume, snapshot):
         raise NotImplementedError
+
+    def remove_snapshot(self, uuid):
+        snapshot = Snapshot.objects(pk=uuid).get()
+        self._remove_snapshot(snapshot)
+        snapshot.delete()
+
+    def _remove_snapshot(self, snapshot):
+        raise NotImplementedError

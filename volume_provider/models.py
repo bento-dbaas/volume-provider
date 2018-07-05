@@ -1,4 +1,4 @@
-from mongoengine import Document, StringField, IntField, ReferenceField
+from mongoengine import Document, StringField, IntField, ReferenceField, CASCADE
 
 
 class Volume(Document):
@@ -21,7 +21,7 @@ class Volume(Document):
 
 
 class Snapshot(Document):
-    volume = ReferenceField(Volume, required=True)
+    volume = ReferenceField(Volume, required=True, reverse_delete_rule=CASCADE)
     identifier = StringField(required=True, max_length=255)
     description = StringField(required=True, max_length=255)
 
