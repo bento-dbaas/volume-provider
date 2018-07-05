@@ -1,8 +1,8 @@
-from mongoengine import Document, StringField, IntField
+from mongoengine import Document, StringField, IntField, ReferenceField
 
 
 class Volume(Document):
-    size_kb = IntField(max_length=255, required=True)
+    size_kb = IntField(required=True)
     group = StringField(max_length=50, required=True)
     resource_id = StringField(max_length=255, required=True)
     identifier = IntField(required=True)
@@ -14,6 +14,16 @@ class Volume(Document):
         pair = Volume.objects(group=group).first()
         if pair:
             self.resource_id = pair.resource_id
+
+    @property
+    def uuid(self):
+        return str(self.pk)
+
+
+class Snapshot(Document):
+    volume = ReferenceField(Volume, required=True)
+    identifier = StringField(required=True, max_length=255)
+    description = StringField(required=True, max_length=255)
 
     @property
     def uuid(self):
