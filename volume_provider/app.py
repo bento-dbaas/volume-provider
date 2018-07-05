@@ -136,11 +136,11 @@ def restore_snapshot(provider_name, env, uuid):
     try:
         provider_cls = get_provider_to(provider_name)
         provider = provider_cls(env)
-        provider.restore_snapshot(uuid)
+        volume = provider.restore_snapshot(uuid)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
-    return response_ok()
+    return response_created(uuid=volume.uuid)
 
 
 def response_invalid_request(error, status_code=500):
