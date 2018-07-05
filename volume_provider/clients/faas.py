@@ -88,8 +88,17 @@ class FaaSClient(object):
         )
 
     def wait_for_job_finished(self, job, attempts=50, interval=30):
+        job_result = None
         for i in range(attempts):
+            sleep(interval)
             job = self.execute(self.client.jobs_get, 200, job)
             if job['status'] == 'finished':
-                return job['result']
-            sleep(interval)
+                job_result = job['result']
+                break
+
+        if not job_result or 'id' not in job_result:
+            raise APIError(500, 'Error while restoring snapshot - {}'.format(
+                job_result
+            ))
+
+        return job_result

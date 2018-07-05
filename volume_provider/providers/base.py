@@ -113,3 +113,16 @@ class ProviderBase(object):
 
     def _remove_snapshot(self, snapshot):
         raise NotImplementedError
+
+    def restore_snapshot(self, uuid):
+        snapshot = Snapshot.objects(pk=uuid).get()
+        volume = Volume()
+        volume.size_kb = snapshot.volume.size_kb
+        volume.set_group(snapshot.volume.group)
+        volume.owner_address = snapshot.volume.owner_address
+        self._restore_snapshot(snapshot, volume)
+        volume.save()
+        return volume
+
+    def _restore_snapshot(self, snapshot, volume):
+        raise NotImplementedError
