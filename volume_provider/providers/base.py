@@ -7,6 +7,7 @@ class ProviderBase(object):
         self.environment = environment
         self._client = None
         self._credential = None
+        self._commands = None
 
     @property
     def client(self):
@@ -33,6 +34,15 @@ class ProviderBase(object):
             return False, str(e)
         else:
             return True, insert.get('_id')
+
+    @property
+    def commands(self):
+        if not self._commands:
+            self._commands = self.get_commands()
+        return self._commands
+
+    def get_commands(self):
+        raise NotImplementedError
 
     @property
     def provider(self):
@@ -125,4 +135,18 @@ class ProviderBase(object):
         return volume
 
     def _restore_snapshot(self, snapshot, volume):
+        raise NotImplementedError
+
+
+class CommandsBase(object):
+
+    @property
+    def data_directory(self):
+        return "/data"
+
+    def mount(self, uuid):
+        volume = Volume.objects(pk=uuid).get()
+        return self._mount(volume)
+
+    def _mount(self, volume):
         raise NotImplementedError

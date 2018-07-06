@@ -1,9 +1,12 @@
 from volume_provider.credentials.faas import CredentialFaaS, CredentialAddFaaS
-from volume_provider.providers.base import ProviderBase
+from volume_provider.providers.base import ProviderBase, CommandsBase
 from volume_provider.clients.faas import FaaSClient
 
 
 class ProviderFaaS(ProviderBase):
+
+    def get_commands(self):
+        return CommandsFaaS()
 
     @classmethod
     def get_provider(cls):
@@ -50,3 +53,20 @@ class ProviderFaaS(ProviderBase):
 
         volume.identifier = job_result['id']
         volume.path = job_result['full_path']
+
+
+class CommandsFaaS(CommandsBase):
+
+    def _mount(self, volume):
+        return '''
+sed '{data}/d' "/etc/fstab"
+echo "{volume_path}	{data} nfs defaults,bg,intr,nolock 0 0" >> /etc/fstab
+die_if_error "Error setting fstab"
+
+if mount | grep {data} > /dev/null; then
+    umount {data}
+    die_if_error "Error umount {data}"
+fi
+mount {data}
+die_if_error "Error mounting {data}"
+            '''.format(data=self.data_directory, volume_path=volume.path)

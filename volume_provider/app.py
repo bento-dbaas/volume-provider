@@ -143,6 +143,19 @@ def restore_snapshot(provider_name, env, uuid):
     return response_created(uuid=volume.uuid)
 
 
+@app.route("/<string:provider_name>/<string:env>/commands/<string:uuid>/mount", methods=['GET'])
+@auth.login_required
+def command_mount(provider_name, env, uuid):
+    try:
+        provider_cls = get_provider_to(provider_name)
+        provider = provider_cls(env)
+        command = provider.commands.mount(uuid)
+    except Exception as e:  # TODO What can get wrong here?
+        print_exc()  # TODO Improve log
+        return response_invalid_request(str(e))
+    return response_ok(command=command)
+
+
 def response_invalid_request(error, status_code=500):
     return _response(status_code, error=error)
 
@@ -156,8 +169,10 @@ def response_created(status_code=201, **kwargs):
     return _response(status_code, **kwargs)
 
 
-def response_ok(message=None):
-    return _response(200, message=message or "ok")
+def response_ok(**kwargs):
+    if kwargs:
+        return _response(200, **kwargs)
+    return _response(200, message="ok")
 
 
 def _response(status, **kwargs):
