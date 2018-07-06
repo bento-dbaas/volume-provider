@@ -1,4 +1,4 @@
-from pymongo import MongoClient
+from pymongo import MongoClient, ReturnDocument
 from volume_provider.settings import MONGODB_PARAMS, MONGODB_DB
 
 
@@ -68,7 +68,8 @@ class CredentialAdd(CredentialMongoDB):
                 'environment': self.environment,
                 **self.content
             }},
-            upsert=True
+            upsert=True,
+            return_document=ReturnDocument.AFTER
         )
 
     def delete(self):
@@ -88,3 +89,5 @@ class CredentialAdd(CredentialMongoDB):
         for field in self.valid_fields:
             if field not in self.content:
                 return False, error
+
+        return True, ''

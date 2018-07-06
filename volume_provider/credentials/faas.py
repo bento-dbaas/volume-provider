@@ -32,18 +32,15 @@ class CredentialFaaS(CredentialBase):
         return self.content['access_type']
 
     @property
-    def token_endpoint(self):
-        return self.content['token_endpoint']
-
-    @property
     def tenant_id(self):
         return self.content['tenant_id']
 
 
 class CredentialAddFaaS(CredentialAdd):
 
+    @property
     def valid_fields(self):
         return [
             'user', 'password', 'endpoint', 'is_secure', 'project',
-            'category_id', 'access_type', 'token_endpoint', 'tenant_id'
+            'category_id', 'access_type', 'tenant_id'
         ]
