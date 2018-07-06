@@ -23,6 +23,26 @@ def verify_password(username, password):
     return True
 
 
+@app.route("/<string:provider_name>/<string:env>/credential/new", methods=['POST'])
+@auth.login_required
+def create_credential(provider_name, env):
+    data = request.get_json()
+    if not data:
+        return response_invalid_request("No data".format(data))
+
+    try:
+        provider_cls = get_provider_to(provider_name)
+        provider = provider_cls(env)
+        success, message = provider.credential_add(data)
+    except Exception as e:
+        print_exc()  # TODO Improve log
+        return response_invalid_request(str(e))
+
+    if not success:
+        return response_invalid_request(message)
+    return response_created(success=success, id=str(message))
+
+
 @app.route("/<string:provider_name>/<string:env>/volume/new", methods=['POST'])
 @auth.login_required
 def create_volume(provider_name, env):
@@ -43,6 +63,7 @@ def create_volume(provider_name, env):
         return response_invalid_request(str(e))
     return response_created(uuid=volume.uuid)
 
+
 @app.route("/<string:provider_name>/<string:env>/volume/<string:uuid>", methods=['DELETE'])
 @auth.login_required
 def delete_volume(provider_name, env, uuid):
@@ -54,6 +75,7 @@ def delete_volume(provider_name, env, uuid):
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
     return response_ok()
+
 
 @app.route("/<string:provider_name>/<string:env>/access/<string:uuid>", methods=['POST'])
 @auth.login_required
@@ -73,6 +95,7 @@ def add_volume_access(provider_name, env, uuid):
         return response_invalid_request(str(e))
     return response_ok()
 
+
 @app.route("/<string:provider_name>/<string:env>/access/<string:uuid>/<string:address>", methods=['DELETE'])
 @auth.login_required
 def remove_volume_access(provider_name, env, uuid, address):
@@ -84,6 +107,7 @@ def remove_volume_access(provider_name, env, uuid, address):
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
     return response_ok()
+
 
 @app.route("/<string:provider_name>/<string:env>/resize/<string:uuid>", methods=['POST'])
 @auth.login_required
