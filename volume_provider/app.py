@@ -1,6 +1,6 @@
 import json
 from traceback import print_exc
-from bson import json_util, ObjectId
+from bson import json_util
 from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
 from flask_httpauth import HTTPBasicAuth
@@ -25,7 +25,9 @@ def verify_password(username, password):
     return True
 
 
-@app.route("/<string:provider_name>/<string:env>/credential/new", methods=['POST'])
+@app.route(
+    "/<string:provider_name>/<string:env>/credential/new", methods=['POST']
+)
 @auth.login_required
 def create_credential(provider_name, env):
     data = request.get_json()
@@ -45,7 +47,6 @@ def create_credential(provider_name, env):
     return response_created(success=success, id=str(message))
 
 
-
 @app.route(
     "/<string:provider_name>/credentials", methods=['GET']
 )
@@ -56,7 +57,7 @@ def get_all_credential(provider_name):
         provider = provider_cls(None)
         return make_response(
             json.dumps(
-                list(map(lambda x: x, provider.build_credential().all())),
+                list(map(lambda x: x, provider.credential.all())),
                 default=json_util.default
             )
         )
@@ -73,7 +74,7 @@ def get_credential(provider_name, env):
     try:
         provider_cls = get_provider_to(provider_name)
         provider = provider_cls(env)
-        credential = provider.build_credential().get_by(environment=env)
+        credential = provider.credential.get_by(environment=env)
     except Exception as e:
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
@@ -81,6 +82,30 @@ def get_credential(provider_name, env):
     if credential.count() == 0:
         return response_not_found('{}/{}'.format(provider_name, env))
     return make_response(json.dumps(credential[0], default=json_util.default))
+
+
+@app.route("/<string:provider_name>/<string:env>/credential", methods=['PUT'])
+@auth.login_required
+def update_credential(provider_name, env):
+    return create_credential(provider_name, env)
+
+
+@app.route(
+    "/<string:provider_name>/<string:env>/credential", methods=['DELETE']
+)
+@auth.login_required
+def destroy_credential(provider_name, env):
+    try:
+        provider_cls = get_provider_to(provider_name)
+        provider = provider_cls(env)
+        deleted = provider.credential.delete()
+    except Exception as e:
+        print_exc()  # TODO Improve log
+        return response_invalid_request(str(e))
+
+    if deleted['n'] > 0:
+        return response_ok()
+    return response_not_found("{}-{}".format(provider_name, env))
 
 
 @app.route("/<string:provider_name>/<string:env>/volume/new", methods=['POST'])
@@ -104,7 +129,10 @@ def create_volume(provider_name, env):
     return response_created(uuid=volume.uuid)
 
 
-@app.route("/<string:provider_name>/<string:env>/volume/<string:uuid>", methods=['DELETE'])
+@app.route(
+    "/<string:provider_name>/<string:env>/volume/<string:uuid>",
+    methods=['DELETE']
+)
 @auth.login_required
 def delete_volume(provider_name, env, uuid):
     try:
@@ -117,7 +145,10 @@ def delete_volume(provider_name, env, uuid):
     return response_ok()
 
 
-@app.route("/<string:provider_name>/<string:env>/access/<string:uuid>", methods=['POST'])
+@app.route(
+    "/<string:provider_name>/<string:env>/access/<string:uuid>",
+    methods=['POST']
+)
 @auth.login_required
 def add_volume_access(provider_name, env, uuid):
     data = request.get_json()
@@ -136,11 +167,14 @@ def add_volume_access(provider_name, env, uuid):
     return response_ok()
 
 
-@app.route("/<string:provider_name>/<string:env>/access/<string:uuid>/<string:address>", methods=['DELETE'])
+@app.route(
+    "/<string:name>/<string:env>/access/<string:uuid>/<string:address>",
+    methods=['DELETE']
+)
 @auth.login_required
-def remove_volume_access(provider_name, env, uuid, address):
+def remove_volume_access(name, env, uuid, address):
     try:
-        provider_cls = get_provider_to(provider_name)
+        provider_cls = get_provider_to(name)
         provider = provider_cls(env)
         provider.remove_access(uuid, address)
     except Exception as e:  # TODO What can get wrong here?
@@ -149,7 +183,10 @@ def remove_volume_access(provider_name, env, uuid, address):
     return response_ok()
 
 
-@app.route("/<string:provider_name>/<string:env>/resize/<string:uuid>", methods=['POST'])
+@app.route(
+    "/<string:provider_name>/<string:env>/resize/<string:uuid>",
+    methods=['POST']
+)
 @auth.login_required
 def resize_volume(provider_name, env, uuid):
     data = request.get_json()
@@ -168,7 +205,10 @@ def resize_volume(provider_name, env, uuid):
     return response_ok()
 
 
-@app.route("/<string:provider_name>/<string:env>/snapshot/<string:uuid>", methods=['POST'])
+@app.route(
+    "/<string:provider_name>/<string:env>/snapshot/<string:uuid>",
+    methods=['POST']
+)
 @auth.login_required
 def take_snapshot(provider_name, env, uuid):
     try:
@@ -181,7 +221,10 @@ def take_snapshot(provider_name, env, uuid):
     return response_created(uuid=snapshot.uuid)
 
 
-@app.route("/<string:provider_name>/<string:env>/snapshot/<string:uuid>", methods=['DELETE'])
+@app.route(
+    "/<string:provider_name>/<string:env>/snapshot/<string:uuid>",
+    methods=['DELETE']
+)
 @auth.login_required
 def remove_snapshot(provider_name, env, uuid):
     try:
@@ -194,7 +237,10 @@ def remove_snapshot(provider_name, env, uuid):
     return response_ok()
 
 
-@app.route("/<string:provider_name>/<string:env>/snapshot/<string:uuid>/restore", methods=['POST'])
+@app.route(
+    "/<string:provider_name>/<string:env>/snapshot/<string:uuid>/restore",
+    methods=['POST']
+)
 @auth.login_required
 def restore_snapshot(provider_name, env, uuid):
     try:
@@ -207,7 +253,10 @@ def restore_snapshot(provider_name, env, uuid):
     return response_created(uuid=volume.uuid)
 
 
-@app.route("/<string:provider_name>/<string:env>/commands/<string:uuid>/mount", methods=['GET'])
+@app.route(
+    "/<string:provider_name>/<string:env>/commands/<string:uuid>/mount",
+    methods=['GET']
+)
 @auth.login_required
 def command_mount(provider_name, env, uuid):
     try:

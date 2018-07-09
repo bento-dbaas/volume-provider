@@ -55,6 +55,11 @@ class CredentialBase(CredentialMongoDB):
     def all(self, **kwargs):
         return self.get_by()
 
+    def delete(self):
+        return self.credential.remove({
+            'provider': self.provider,
+            'environment': self.environment
+        })
 
 
 class CredentialAdd(CredentialMongoDB):
