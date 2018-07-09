@@ -75,30 +75,30 @@ class ProviderBase(object):
     def _create_volume(self, volume):
         raise NotImplementedError
 
-    def delete_volume(self, uuid):
-        volume = Volume.objects(pk=uuid).get()
+    def delete_volume(self, identifier):
+        volume = Volume.objects(identifier=identifier).get()
         self._delete_volume(volume)
         volume.delete()
 
     def _delete_volume(self, volume):
         raise NotImplementedError
 
-    def add_access(self, uuid, to_address):
-        volume = Volume.objects(pk=uuid).get()
+    def add_access(self, identifier, to_address):
+        volume = Volume.objects(identifier=identifier).get()
         self._add_access(volume, to_address)
 
     def _add_access(self, volume, to_address):
         raise NotImplementedError
 
-    def remove_access(self, uuid, to_address):
-        volume = Volume.objects(pk=uuid).get()
+    def remove_access(self, identifier, to_address):
+        volume = Volume.objects(identifier=identifier).get()
         self._remove_access(volume, to_address)
 
     def _remove_access(self, volume, to_address):
         raise NotImplementedError
 
-    def resize(self, uuid, new_size_kb):
-        volume = Volume.objects(pk=uuid).get()
+    def resize(self, identifier, new_size_kb):
+        volume = Volume.objects(identifier=identifier).get()
         self._resize(volume, new_size_kb)
         volume.size_kb = new_size_kb
         volume.save()
@@ -106,8 +106,8 @@ class ProviderBase(object):
     def _resize(self, volume, new_size_kb):
         raise NotImplementedError
 
-    def take_snapshot(self, uuid):
-        volume = Volume.objects(pk=uuid).get()
+    def take_snapshot(self, identifier):
+        volume = Volume.objects(identifier=identifier).get()
         snapshot = Snapshot(volume=volume)
         self._take_snapshot(volume, snapshot)
         snapshot.save()
@@ -116,16 +116,16 @@ class ProviderBase(object):
     def _take_snapshot(self, volume, snapshot):
         raise NotImplementedError
 
-    def remove_snapshot(self, uuid):
-        snapshot = Snapshot.objects(pk=uuid).get()
+    def remove_snapshot(self, identifier):
+        snapshot = Snapshot.objects(identifier=identifier).get()
         self._remove_snapshot(snapshot)
         snapshot.delete()
 
     def _remove_snapshot(self, snapshot):
         raise NotImplementedError
 
-    def restore_snapshot(self, uuid):
-        snapshot = Snapshot.objects(pk=uuid).get()
+    def restore_snapshot(self, identifier):
+        snapshot = Snapshot.objects(identifier=identifier).get()
         volume = Volume()
         volume.size_kb = snapshot.volume.size_kb
         volume.set_group(snapshot.volume.group)
@@ -144,8 +144,8 @@ class CommandsBase(object):
     def data_directory(self):
         return "/data"
 
-    def mount(self, uuid):
-        volume = Volume.objects(pk=uuid).get()
+    def mount(self, identifier):
+        volume = Volume.objects(identifier=identifier).get()
         return self._mount(volume)
 
     def _mount(self, volume):

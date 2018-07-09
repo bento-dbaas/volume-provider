@@ -126,19 +126,19 @@ def create_volume(provider_name, env):
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
-    return response_created(uuid=volume.uuid)
+    return response_created(identifier=volume.identifier)
 
 
 @app.route(
-    "/<string:provider_name>/<string:env>/volume/<string:uuid>",
+    "/<string:provider_name>/<string:env>/volume/<string:identifier>",
     methods=['DELETE']
 )
 @auth.login_required
-def delete_volume(provider_name, env, uuid):
+def delete_volume(provider_name, env, identifier):
     try:
         provider_cls = get_provider_to(provider_name)
         provider = provider_cls(env)
-        provider.delete_volume(uuid)
+        provider.delete_volume(identifier)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
@@ -146,11 +146,11 @@ def delete_volume(provider_name, env, uuid):
 
 
 @app.route(
-    "/<string:provider_name>/<string:env>/access/<string:uuid>",
+    "/<string:provider_name>/<string:env>/access/<string:identifier>",
     methods=['POST']
 )
 @auth.login_required
-def add_volume_access(provider_name, env, uuid):
+def add_volume_access(provider_name, env, identifier):
     data = request.get_json()
     to_address = data.get("to_address", None)
 
@@ -160,7 +160,7 @@ def add_volume_access(provider_name, env, uuid):
     try:
         provider_cls = get_provider_to(provider_name)
         provider = provider_cls(env)
-        provider.add_access(uuid, to_address)
+        provider.add_access(identifier, to_address)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
@@ -168,15 +168,15 @@ def add_volume_access(provider_name, env, uuid):
 
 
 @app.route(
-    "/<string:name>/<string:env>/access/<string:uuid>/<string:address>",
+    "/<string:name>/<string:env>/access/<string:identifier>/<string:address>",
     methods=['DELETE']
 )
 @auth.login_required
-def remove_volume_access(name, env, uuid, address):
+def remove_volume_access(name, env, identifier, address):
     try:
         provider_cls = get_provider_to(name)
         provider = provider_cls(env)
-        provider.remove_access(uuid, address)
+        provider.remove_access(identifier, address)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
@@ -184,11 +184,11 @@ def remove_volume_access(name, env, uuid, address):
 
 
 @app.route(
-    "/<string:provider_name>/<string:env>/resize/<string:uuid>",
+    "/<string:provider_name>/<string:env>/resize/<string:identifier>",
     methods=['POST']
 )
 @auth.login_required
-def resize_volume(provider_name, env, uuid):
+def resize_volume(provider_name, env, identifier):
     data = request.get_json()
     new_size_kb = data.get("new_size_kb", None)
 
@@ -198,7 +198,7 @@ def resize_volume(provider_name, env, uuid):
     try:
         provider_cls = get_provider_to(provider_name)
         provider = provider_cls(env)
-        provider.resize(uuid, new_size_kb)
+        provider.resize(identifier, new_size_kb)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
@@ -206,31 +206,31 @@ def resize_volume(provider_name, env, uuid):
 
 
 @app.route(
-    "/<string:provider_name>/<string:env>/snapshot/<string:uuid>",
+    "/<string:provider_name>/<string:env>/snapshot/<string:identifier>",
     methods=['POST']
 )
 @auth.login_required
-def take_snapshot(provider_name, env, uuid):
+def take_snapshot(provider_name, env, identifier):
     try:
         provider_cls = get_provider_to(provider_name)
         provider = provider_cls(env)
-        snapshot = provider.take_snapshot(uuid)
+        snapshot = provider.take_snapshot(identifier)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
-    return response_created(uuid=snapshot.uuid)
+    return response_created(identifier=snapshot.identifier)
 
 
 @app.route(
-    "/<string:provider_name>/<string:env>/snapshot/<string:uuid>",
+    "/<string:provider_name>/<string:env>/snapshot/<string:identifier>",
     methods=['DELETE']
 )
 @auth.login_required
-def remove_snapshot(provider_name, env, uuid):
+def remove_snapshot(provider_name, env, identifier):
     try:
         provider_cls = get_provider_to(provider_name)
         provider = provider_cls(env)
-        provider.remove_snapshot(uuid)
+        provider.remove_snapshot(identifier)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
@@ -238,31 +238,31 @@ def remove_snapshot(provider_name, env, uuid):
 
 
 @app.route(
-    "/<string:provider_name>/<string:env>/snapshot/<string:uuid>/restore",
+    "/<string:provider_name>/<string:env>/snapshot/<string:identifier>/restore",
     methods=['POST']
 )
 @auth.login_required
-def restore_snapshot(provider_name, env, uuid):
+def restore_snapshot(provider_name, env, identifier):
     try:
         provider_cls = get_provider_to(provider_name)
         provider = provider_cls(env)
-        volume = provider.restore_snapshot(uuid)
+        volume = provider.restore_snapshot(identifier)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
-    return response_created(uuid=volume.uuid)
+    return response_created(identifier=volume.identifier)
 
 
 @app.route(
-    "/<string:provider_name>/<string:env>/commands/<string:uuid>/mount",
+    "/<string:provider_name>/<string:env>/commands/<string:identifier>/mount",
     methods=['GET']
 )
 @auth.login_required
-def command_mount(provider_name, env, uuid):
+def command_mount(provider_name, env, identifier):
     try:
         provider_cls = get_provider_to(provider_name)
         provider = provider_cls(env)
-        command = provider.commands.mount(uuid)
+        command = provider.commands.mount(identifier)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
