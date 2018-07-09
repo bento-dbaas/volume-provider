@@ -49,6 +49,12 @@ class CredentialBase(CredentialMongoDB):
             self._content = self.get_content()
         return super(CredentialBase, self).content
 
+    def get_by(self, **kwargs):
+        return self.credential.find({'provider': self.provider, **kwargs})
+
+    def all(self, **kwargs):
+        return self.get_by()
+
 
 
 class CredentialAdd(CredentialMongoDB):

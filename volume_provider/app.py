@@ -1,8 +1,10 @@
-from mongoengine import connect
+import json
 from traceback import print_exc
+from bson import json_util, ObjectId
 from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
 from flask_httpauth import HTTPBasicAuth
+from mongoengine import connect
 from volume_provider.settings import APP_USERNAME, APP_PASSWORD, \
     MONGODB_PARAMS, MONGODB_DB
 from volume_provider.providers import get_provider_to
@@ -41,6 +43,44 @@ def create_credential(provider_name, env):
     if not success:
         return response_invalid_request(message)
     return response_created(success=success, id=str(message))
+
+
+
+@app.route(
+    "/<string:provider_name>/credentials", methods=['GET']
+)
+@auth.login_required
+def get_all_credential(provider_name):
+    try:
+        provider_cls = get_provider_to(provider_name)
+        provider = provider_cls(None)
+        return make_response(
+            json.dumps(
+                list(map(lambda x: x, provider.build_credential().all())),
+                default=json_util.default
+            )
+        )
+    except Exception as e:
+        print_exc()  # TODO Improve log
+        return response_invalid_request(str(e))
+
+
+@app.route(
+    "/<string:provider_name>/<string:env>/credential", methods=['GET']
+)
+@auth.login_required
+def get_credential(provider_name, env):
+    try:
+        provider_cls = get_provider_to(provider_name)
+        provider = provider_cls(env)
+        credential = provider.build_credential().get_by(environment=env)
+    except Exception as e:
+        print_exc()  # TODO Improve log
+        return response_invalid_request(str(e))
+
+    if credential.count() == 0:
+        return response_not_found('{}/{}'.format(provider_name, env))
+    return make_response(json.dumps(credential[0], default=json_util.default))
 
 
 @app.route("/<string:provider_name>/<string:env>/volume/new", methods=['POST'])
