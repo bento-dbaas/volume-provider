@@ -58,15 +58,42 @@ class ProviderFaaS(ProviderBase):
 class CommandsFaaS(CommandsBase):
 
     def _mount(self, volume):
-        return '''
-sed '{data}/d' "/etc/fstab"
-echo "{volume_path}	{data} nfs defaults,bg,intr,nolock 0 0" >> /etc/fstab
-die_if_error "Error setting fstab"
+        script = self.die_if_error_script()
+        script += self.fstab_script(filer_path=volume.path,
+                                    mount_path=self.data_directory)
+        script += self.mount_script(mount_path=self.data_directory)
+        return script
 
-if mount | grep {data} > /dev/null; then
-    umount {data}
-    die_if_error "Error umount {data}"
+    def die_if_error_script(self):
+        return """
+die_if_error()
+{
+    local err=$?
+    if [ "$err" != "0" ]; then
+        echo "$*"
+        exit $err
+    fi
+}
+"""
+
+    def fstab_script(self, filer_path, mount_path):
+        return """
+echo "{filer_path} {mount_path} nfs defaults,bg,intr,nolock 0 0" >> /etc/fstab
+die_if_error "Error setting fstab"
+""".format(mount_path=mount_path, filer_path=filer_path)
+
+    def mount_script(self, mount_path):
+        return """
+if mount | grep {mount_path} > /dev/null; then
+    umount {mount_path}
+    die_if_error "Error umount {mount_path}"
 fi
-mount {data}
-die_if_error "Error mounting {data}"
-            '''.format(data=self.data_directory, volume_path=volume.path)
+mount {mount_path}
+die_if_error "Error mounting {mount_path}"
+wcl=$(mount -l | grep data | grep nfs | wc -l)
+if [ "$wcl" -eq 0 ]
+then
+    echo "Could not mount /data"
+    exit 1
+fi
+""".format(mount_path=mount_path)
