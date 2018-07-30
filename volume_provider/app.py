@@ -218,7 +218,10 @@ def take_snapshot(provider_name, env, identifier):
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
-    return response_created(identifier=snapshot.identifier)
+    return response_created(
+        identifier=snapshot.identifier,
+        description=snapshot.description
+    )
 
 
 @app.route(
@@ -263,6 +266,22 @@ def command_mount(provider_name, env, identifier):
         provider_cls = get_provider_to(provider_name)
         provider = provider_cls(env)
         command = provider.commands.mount(identifier)
+    except Exception as e:  # TODO What can get wrong here?
+        print_exc()  # TODO Improve log
+        return response_invalid_request(str(e))
+    return response_ok(command=command)
+
+
+@app.route(
+    "/<string:provider_name>/<string:env>/commands/<string:identifier>/cleanup",
+    methods=['GET']
+)
+@auth.login_required
+def cleanup(provider_name, env, identifier):
+    try:
+        provider_cls = get_provider_to(provider_name)
+        provider = provider_cls(env)
+        command = provider.commands.clean_up(identifier)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))

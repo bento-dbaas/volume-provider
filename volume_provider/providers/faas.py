@@ -59,9 +59,8 @@ class CommandsFaaS(CommandsBase):
 
     def _mount(self, volume):
         script = self.die_if_error_script()
-        script += self.fstab_script(filer_path=volume.path,
-                                    mount_path=self.data_directory)
-        script += self.mount_script(mount_path=self.data_directory)
+        script += self.fstab_script(volume.path, self.data_directory)
+        script += self.mount_script(self.data_directory)
         return script
 
     def die_if_error_script(self):
@@ -78,6 +77,8 @@ die_if_error()
 
     def fstab_script(self, filer_path, mount_path):
         return """
+cp /etc/fstab /etc/fstab.bkp;
+sed \'/\{mount_path}/d\' /etc/fstab.bkp > /etc/fstab;
 echo "{filer_path} {mount_path} nfs defaults,bg,intr,nolock 0 0" >> /etc/fstab
 die_if_error "Error setting fstab"
 """.format(mount_path=mount_path, filer_path=filer_path)
@@ -97,3 +98,14 @@ then
     exit 1
 fi
 """.format(mount_path=mount_path)
+
+    def _clean_up(self, volume):
+        mount_path = "/mnt_{}".format(volume.identifier)
+        command = "mkdir -p {}".format(mount_path)
+        command += "\nmount -t nfs -o bg,intr {} {}".format(
+            volume.path, mount_path
+        )
+        command += "\nrm -rf {}/*".format(mount_path)
+        command += "\numount {}".format(mount_path)
+        command += "\nrm -rf {}".format(mount_path)
+        return command
