@@ -19,6 +19,17 @@ class Volume(Document):
     def uuid(self):
         return str(self.pk)
 
+    @property
+    def get_json(self):
+        return {
+            'size_kb': self.size_kb,
+            'group': self.group,
+            'resource_id': self.resource_id,
+            'identifier': self.identifier,
+            'path': self.path,
+            'owner_address': self.owner_address,
+        }
+
 
 class Snapshot(Document):
     volume = ReferenceField(Volume, required=True, reverse_delete_rule=CASCADE)

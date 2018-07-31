@@ -83,6 +83,18 @@ class ProviderBase(object):
     def _delete_volume(self, volume):
         raise NotImplementedError
 
+    def get_volume(self, identifier_or_path):
+        if identifier_or_path.isdigit():
+            try:
+                return Volume.objects(identifier=identifier_or_path).get()
+            except Volume.DoesNotExist:
+                return None
+
+        try:
+            return Volume.objects(path__icontains=identifier_or_path).get()
+        except Volume.DoesNotExist:
+            return None
+
     def add_access(self, identifier, to_address):
         volume = Volume.objects(identifier=identifier).get()
         self._add_access(volume, to_address)

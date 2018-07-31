@@ -146,6 +146,25 @@ def delete_volume(provider_name, env, identifier):
 
 
 @app.route(
+    "/<string:provider_name>/<string:env>/volume/<string:identifier_or_path>",
+    methods=['GET']
+)
+@auth.login_required
+def get_volume(provider_name, env, identifier_or_path):
+    try:
+        provider_cls = get_provider_to(provider_name)
+        provider = provider_cls(env)
+    except Exception as e:  # TODO What can get wrong here?
+        print_exc()  # TODO Improve log
+        return response_invalid_request(str(e))
+
+    volume = provider.get_volume(identifier_or_path)
+    if not volume:
+        return response_not_found(identifier_or_path)
+    return response_ok(**volume.get_json)
+
+
+@app.route(
     "/<string:provider_name>/<string:env>/access/<string:identifier>",
     methods=['POST']
 )
