@@ -65,8 +65,8 @@ class ProviderAWS(ProviderBase):
             if ebs.state == state:
                 return True
             sleep(DELAY)
-        raise EnvironmentError("Volume {} is {}".format(
-            volume.identifier, state
+        raise EnvironmentError("Volume {} is {} should be {}".format(
+            volume.id, ebs.state, state
         ))
 
     def __waiting_be_available(self, volume):
@@ -113,7 +113,7 @@ class ProviderAWS(ProviderBase):
                         ebs.id, node.id
                     )
                 )
-            self.client.detach_volume(ebs)
+            self.client.detach_volume(ebs, self.credential.force_detach)
             self.__waiting_be_available(volume)
         self.client.destroy_volume(ebs)
 

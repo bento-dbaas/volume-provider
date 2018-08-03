@@ -27,6 +27,10 @@ class CredentialAWS(CredentialBase):
     def iops(self):
         return self.content.get('iops', None)
 
+    @property
+    def force_detach(self):
+        return self.content.get('force_detach', False)
+
 
 class CredentialAddAWS(CredentialAdd):
 
