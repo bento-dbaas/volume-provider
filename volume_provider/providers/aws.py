@@ -6,9 +6,10 @@ from volume_provider.credentials.aws import CredentialAWS, CredentialAddAWS
 from volume_provider.providers.base import ProviderBase, CommandsBase
 
 
-STATUS_READY = 'available'
+STATE_AVAILABLE = 'available'
+STATE_INUSE = 'inuse'
 ATTEMPTS = 60
-DELAY = 5
+DELAY = 1
 SimpleEbs = namedtuple('ebs', 'id')
 
 
@@ -58,22 +59,34 @@ class ProviderAWS(ProviderBase):
             return None
         return ebs
 
-    def __waiting_be_ready(self, volume):
+    def __waiting_be(self, state, volume):
         for _ in range(ATTEMPTS):
             ebs = self.__get_ebs(volume)
-            if ebs.state == STATUS_READY:
+            if ebs.state == state:
                 return True
             sleep(DELAY)
-        return False
+        raise EnvironmentError("Volume {} is {}".format(
+            volume.identifier, state
+        ))
 
-    def __mount(self, volume):
-        if not self.provider.__waiting_be_ready(volume):
-            raise EnvironmentError("Volume {} is not ready".format(
-                volume.identifier
-            ))
-        node = self.provider.__get_node(volume)
-        vol = self.provider.__get_ebs(volume)
-        self.provider.client.attach_volume(node, vol, self.credential.device)
+    def __waiting_be_available(self, volume):
+        return self.__waiting_be(STATE_AVAILABLE, volume)
+
+    def __waiting_be_in_use(self, volume):
+        return self.__waiting_be(STATE_INUSE, volume)
+
+    def mount(self, volume):
+        node = self.__get_node(volume)
+        ebs = self.__get_ebs(volume)
+        if ebs.state == STATE_INUSE:
+            if ebs.extra['instance_id'] == node.id:
+                return
+            raise EnvironmentError(
+                'Volume {} being used in {}'.format(ebs.id, node.id)
+            )
+        self.__waiting_be_available(volume)
+        self.client.attach_volume(node, ebs, self.credential.device)
+        self.__waiting_be_in_use(volume)
 
     def _create_volume(self, volume):
         node = self.__get_node(volume)
@@ -91,7 +104,17 @@ class ProviderAWS(ProviderBase):
         return
 
     def _delete_volume(self, volume):
-        ebs = SimpleEbs(volume.identifier)
+        node = self.__get_node(volume)
+        ebs = self.__get_ebs(volume)
+        if ebs.state == STATE_INUSE:
+            if ebs.extra['instance_id'] != node.id:
+                raise EnvironmentError(
+                    "Volume {} not attached in instance {}".format(
+                        ebs.id, node.id
+                    )
+                )
+            self.client.detach_volume(ebs)
+            self.__waiting_be_available(volume)
         self.client.destroy_volume(ebs)
 
     def _remove_access(self, volume, to_address):
@@ -138,12 +161,14 @@ class CommandsAWS(CommandsBase):
         self.provider = provider
 
     def _mount(self, volume):
-        self.provider.__mount(volume)
+        self.provider.mount(volume)
         device = "/dev/xv{}".format(
             self.provider.credential.device.split('/')[-1][-2:]
         )
-        command = 'mkfs -t xfs {}'.format(device)
-        command += '\nmkdir /data && mount {} /data'.format(device)
+        command = 'yum -y install xfsprogs'
+        command += ' && mkfs -t xfs {}'.format(device)
+        command += ' && mkdir -p /data'
+        command += ' && mount {} /data'.format(device)
         return command
 
     def _clean_up(self, volume):

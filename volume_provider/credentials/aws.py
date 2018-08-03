@@ -21,7 +21,7 @@ class CredentialAWS(CredentialBase):
 
     @property
     def device(self):
-        return self.content['device']
+        return '/dev/sdf'
 
     @property
     def iops(self):
