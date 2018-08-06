@@ -118,9 +118,7 @@ class ProviderAWS(ProviderBase):
         self.client.destroy_volume(ebs)
 
     def _remove_access(self, volume, to_address):
-        pass
-        # TODO
-        # self.client.delete_access(volume, to_address)
+        return
 
     def _resize(self, volume, new_size_kb):
         ebs = self.__get_ebs(volume)
@@ -128,20 +126,20 @@ class ProviderAWS(ProviderBase):
         self.client.ex_modify_volume(ebs, {'Size': new_size_gb})
 
     def _take_snapshot(self, volume, snapshot):
-        pass
-        #for vol in self.get_volumes_from_node(inst_id):
-        #    print("Creating snapshot of volume {}".format(vol.id))
-        #    self.driver.create_volume_snapshot(vol, name)
-        #    snapshot.identifier = str(new_snapshot['snapshot']['id'])
-        #    snapshot.description = new_snapshot['snapshot']['name']
+        ebs = self.__get_ebs(volume)
+        new_snapshot = self.client.create_volume_snapshot(ebs)
+        snapshot.identifier = new_snapshot.id
+        snapshot.description = new_snapshot.name
 
     def _remove_snapshot(self, snapshot):
-        pass
-        #for vol in self.get_volumes_from_node(inst_id):
-        #    for snapshot in vol.list_snapshots():
-        #        if snapshot.name == name:
-        #            print("Destroying snap {}".format(snapshot.id))
-        #            snapshot.destroy()
+        ebs = self.__get_ebs(snapshot.volume)
+        for ebs_snapshot in ebs.list_snapshots():
+            if ebs_snapshot.id == snapshot.identifier:
+                ebs_snapshot.destroy()
+                return
+        raise EnvironmentError("Snapshot {} not found to volume {}".format(
+            snapshot.identifier, snapshot.volume.identifier
+        ))
 
     def _restore_snapshot(self, snapshot, volume):
         pass
