@@ -123,11 +123,9 @@ class ProviderAWS(ProviderBase):
         # self.client.delete_access(volume, to_address)
 
     def _resize(self, volume, new_size_kb):
-        pass
-        #TODO
-        #for vol in self.get_volumes_from_node(inst_id):
-        #    if vol.extra.get('volume_type') != 'standard':
-        #        self.driver.ex_modify_volume(vol, {'Size': size})
+        ebs = self.__get_ebs(volume)
+        new_size_gb = volume.convert_kb_to_gb(new_size_kb)
+        self.client.ex_modify_volume(ebs, {'Size': new_size_gb})
 
     def _take_snapshot(self, volume, snapshot):
         pass
