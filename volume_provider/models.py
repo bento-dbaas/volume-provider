@@ -41,6 +41,10 @@ class Volume(Document):
     def size_gb(self):
         return self.convert_kb_to_gb(self.size_kb)
 
+    @property
+    def snapshots(self):
+        return Snapshot.objects.filter(volume=self)
+
 
 class Snapshot(Document):
     volume = ReferenceField(Volume, required=True, reverse_delete_rule=CASCADE)

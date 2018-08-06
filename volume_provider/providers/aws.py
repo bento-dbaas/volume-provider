@@ -125,6 +125,8 @@ class ProviderAWS(ProviderBase):
         ebs = self.__get_ebs(volume)
         self.__detach_volume(volume)
         self.client.destroy_volume(ebs)
+        for snapshot in volume.snapshots:
+            self._remove_snapshot(snapshot)
 
     def _remove_access(self, volume, to_address):
         return
