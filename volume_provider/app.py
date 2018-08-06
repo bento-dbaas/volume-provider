@@ -292,6 +292,22 @@ def command_mount(provider_name, env, identifier):
 
 
 @app.route(
+    "/<string:provider_name>/<string:env>/commands/<string:identifier>/umount",
+    methods=['GET']
+)
+@auth.login_required
+def command_umount(provider_name, env, identifier):
+    try:
+        provider_cls = get_provider_to(provider_name)
+        provider = provider_cls(env)
+        command = provider.commands.umount(identifier)
+    except Exception as e:  # TODO What can get wrong here?
+        print_exc()  # TODO Improve log
+        return response_invalid_request(str(e))
+    return response_ok(command=command)
+
+
+@app.route(
     "/<string:provider_name>/<string:env>/commands/<string:identifier>/cleanup",
     methods=['GET']
 )

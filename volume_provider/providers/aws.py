@@ -60,11 +60,12 @@ class ProviderAWS(ProviderBase):
         return ebs
 
     def __waiting_be(self, state, volume):
+        ebs = self.__get_ebs(volume)
         for _ in range(ATTEMPTS):
-            ebs = self.__get_ebs(volume)
             if ebs.state == state:
                 return True
             sleep(DELAY)
+            ebs = self.__get_ebs(volume)
         raise EnvironmentError("Volume {} is {} should be {}".format(
             volume.id, ebs.state, state
         ))
@@ -88,13 +89,30 @@ class ProviderAWS(ProviderBase):
         self.client.attach_volume(node, ebs, self.credential.device)
         self.__waiting_be_in_use(volume)
 
-    def _create_volume(self, volume):
+    def umount(self, volume):
+        self.__detach_volume(volume)
+
+    def __detach_volume(self, volume):
+        ebs = self.__get_ebs(volume)
+        if ebs.state != STATE_INUSE:
+            return
+
+        node = self.__get_node(volume)
+        if ebs.extra['instance_id'] != node.id:
+            raise EnvironmentError(
+                "Volume {} not attached in instance {}".format(ebs.id, node.id)
+            )
+        self.client.detach_volume(ebs, self.credential.force_detach)
+        self.__waiting_be_available(volume)
+
+    def _create_volume(self, volume, snapshot=None):
         node = self.__get_node(volume)
         ebs = self.client.create_volume(
             size=volume.size_gb, name=node.name,
             ex_volume_type=self.credential.ebs_type,
             ex_iops=self.credential.iops,
-            location=self.__get_location(node)
+            location=self.__get_location(node),
+            snapshot=snapshot
         )
         volume.identifier = ebs.id
         volume.resource_id = ebs.name
@@ -104,17 +122,8 @@ class ProviderAWS(ProviderBase):
         return
 
     def _delete_volume(self, volume):
-        node = self.__get_node(volume)
         ebs = self.__get_ebs(volume)
-        if ebs.state == STATE_INUSE:
-            if ebs.extra['instance_id'] != node.id:
-                raise EnvironmentError(
-                    "Volume {} not attached in instance {}".format(
-                        ebs.id, node.id
-                    )
-                )
-            self.client.detach_volume(ebs, self.credential.force_detach)
-            self.__waiting_be_available(volume)
+        self.__detach_volume(volume)
         self.client.destroy_volume(ebs)
 
     def _remove_access(self, volume, to_address):
@@ -131,25 +140,22 @@ class ProviderAWS(ProviderBase):
         snapshot.identifier = new_snapshot.id
         snapshot.description = new_snapshot.name
 
-    def _remove_snapshot(self, snapshot):
+    def __get_snapshot(self, snapshot):
         ebs = self.__get_ebs(snapshot.volume)
         for ebs_snapshot in ebs.list_snapshots():
             if ebs_snapshot.id == snapshot.identifier:
-                ebs_snapshot.destroy()
-                return
+                return ebs_snapshot
         raise EnvironmentError("Snapshot {} not found to volume {}".format(
             snapshot.identifier, snapshot.volume.identifier
         ))
 
+    def _remove_snapshot(self, snapshot):
+        ebs_snapshot = self.__get_snapshot(snapshot)
+        ebs_snapshot.destroy()
+
     def _restore_snapshot(self, snapshot, volume):
-        pass
-        # TODO
-        #restore_job = self.client.restore_snapshot(snapshot.volume, snapshot)
-        #job_result = self.client.wait_for_job_finished(restore_job['job'])
-
-        #volume.identifier = job_result['id']
-        #volume.path = job_result['full_path']
-
+        ebs_snapshot = self.__get_snapshot(snapshot)
+        self._create_volume(volume, ebs_snapshot)
 
 class CommandsAWS(CommandsBase):
 
@@ -162,10 +168,19 @@ class CommandsAWS(CommandsBase):
             self.provider.credential.device.split('/')[-1][-2:]
         )
         command = 'yum -y install xfsprogs'
-        command += ' && mkfs -t xfs {}'.format(device)
+        command += """ &&
+formatted=$(blkid -o value -s TYPE {0} | grep xfs | wc -l)
+if [ "$formatted" -eq 0 ]
+then
+    mkfs -t xfs {0}
+fi """.format(device)
         command += ' && mkdir -p /data'
         command += ' && mount {} /data'.format(device)
         return command
+
+    def _umount(self, volume):
+        self.provider.umount(volume)
+        return None
 
     def _clean_up(self, volume):
         return None

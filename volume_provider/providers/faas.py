@@ -99,6 +99,11 @@ then
 fi
 """.format(mount_path=mount_path)
 
+    def _umount(self, volume):
+        script = self.die_if_error_script()
+        script += 'umount /data'
+        return script
+
     def _clean_up(self, volume):
         mount_path = "/mnt_{}".format(volume.identifier)
         command = "mkdir -p {}".format(mount_path)
