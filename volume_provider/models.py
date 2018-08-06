@@ -34,9 +34,12 @@ class Volume(Document):
     def pairs(self):
         return Volume.objects(group=self.group).all()
 
+    def convert_kb_to_gb(self, size_kb):
+        return int((int(size_kb)/1024)/1024)
+
     @property
     def size_gb(self):
-        return int((int(self.size_kb)/1024)/1024)
+        return self.convert_kb_to_gb(self.size_kb)
 
 
 class Snapshot(Document):
