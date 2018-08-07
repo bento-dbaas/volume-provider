@@ -1,3 +1,4 @@
+from volume_provider.models import Volume
 from volume_provider.credentials.base import CredentialBase, CredentialAdd
 
 
@@ -19,9 +20,16 @@ class CredentialAWS(CredentialBase):
     def ebs_type(self):
         return self.content['ebs_type']
 
-    @property
-    def device(self):
-        return '/dev/sdf'
+    @staticmethod
+    def next_device(owner_address):
+        base = '/dev/sd{}'
+        linux_devices = ['f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p']
+        for volume in Volume.objects.filter(owner_address=owner_address):
+            device = volume.path[-1]
+            if device in linux_devices:
+                linux_devices.remove(device)
+        print(linux_devices)
+        return base.format(linux_devices[0])
 
     @property
     def iops(self):

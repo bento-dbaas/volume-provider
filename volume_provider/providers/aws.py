@@ -86,7 +86,7 @@ class ProviderAWS(ProviderBase):
                 'Volume {} being used in {}'.format(ebs.id, node.id)
             )
         self.__waiting_be_available(volume)
-        self.client.attach_volume(node, ebs, self.credential.device)
+        self.client.attach_volume(node, ebs, volume.path)
         self.__waiting_be_in_use(volume)
 
     def umount(self, volume):
@@ -116,17 +116,17 @@ class ProviderAWS(ProviderBase):
         )
         volume.identifier = ebs.id
         volume.resource_id = ebs.name
-        volume.path = self.credential.device
+        volume.path = self.credential.next_device(volume.owner_address)
 
     def _add_access(self, volume, to_address):
         return
 
     def _delete_volume(self, volume):
+        for snapshot in volume.snapshots:
+            self._remove_snapshot(snapshot)
         ebs = self.__get_ebs(volume)
         self.__detach_volume(volume)
         self.client.destroy_volume(ebs)
-        for snapshot in volume.snapshots:
-            self._remove_snapshot(snapshot)
 
     def _remove_access(self, volume, to_address):
         return
@@ -166,9 +166,7 @@ class CommandsAWS(CommandsBase):
 
     def _mount(self, volume):
         self.provider.mount(volume)
-        device = "/dev/xv{}".format(
-            self.provider.credential.device.split('/')[-1][-2:]
-        )
+        device = "/dev/xv{}".format(volume.path.split('/')[-1][-2:])
         command = 'yum -y install xfsprogs'
         command += """ &&
 formatted=$(blkid -o value -s TYPE {0} | grep xfs | wc -l)
