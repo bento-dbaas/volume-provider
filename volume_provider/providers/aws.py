@@ -174,13 +174,20 @@ if [ "$formatted" -eq 0 ]
 then
     mkfs -t xfs {0}
 fi """.format(device)
-        command += ' && mkdir -p /data'
-        command += ' && mount {} /data'.format(device)
+        command += ' && ' + self.fstab_script(device, self.data_directory)
+        command += ' && mkdir -p {}'.format(self.data_directory)
+        command += ' && mount {}'.format(self.data_directory)
         return command
+
+    def fstab_script(self, filer_path, mount_path):
+        command = "cp /etc/fstab /etc/fstab.bkp"
+        command += " && sed \'/\{mount_path}/d\' /etc/fstab.bkp > /etc/fstab"
+        command += ' && echo "{filer_path}  {mount_path}    xfs defaults    0   0" >> /etc/fstab'
+        return command.format(mount_path=mount_path, filer_path=filer_path)
 
     def _umount(self, volume):
         self.provider.umount(volume)
-        return "umount /data"
+        return "umount {}".format(self.data_directory)
 
     def _clean_up(self, volume):
         return None
