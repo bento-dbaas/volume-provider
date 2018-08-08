@@ -9,7 +9,7 @@ from volume_provider.providers.base import ProviderBase, CommandsBase
 STATE_AVAILABLE = 'available'
 STATE_INUSE = 'inuse'
 ATTEMPTS = 60
-DELAY = 1
+DELAY = 5
 SimpleEbs = namedtuple('ebs', 'id')
 
 

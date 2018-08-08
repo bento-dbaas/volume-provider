@@ -23,7 +23,7 @@ class ProviderFaaS(ProviderBase):
 
     def _create_volume(self, volume):
         export = self.client.create_export(volume.size_kb, volume.resource_id)
-        volume.identifier = export['id']
+        volume.identifier = str(export['id'])
         volume.resource_id = export['resource_id']
         volume.path = export['full_path']
 
@@ -51,7 +51,7 @@ class ProviderFaaS(ProviderBase):
         restore_job = self.client.restore_snapshot(snapshot.volume, snapshot)
         job_result = self.client.wait_for_job_finished(restore_job['job'])
 
-        volume.identifier = job_result['id']
+        volume.identifier = str(job_result['id'])
         volume.path = job_result['full_path']
 
 
