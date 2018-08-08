@@ -180,7 +180,7 @@ fi """.format(device)
 
     def _umount(self, volume):
         self.provider.umount(volume)
-        return None
+        return "umount /data"
 
     def _clean_up(self, volume):
         return None

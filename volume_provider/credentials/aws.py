@@ -28,7 +28,6 @@ class CredentialAWS(CredentialBase):
             device = volume.path[-1]
             if device in linux_devices:
                 linux_devices.remove(device)
-        print(linux_devices)
         return base.format(linux_devices[0])
 
     @property
