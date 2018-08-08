@@ -108,7 +108,7 @@ class ProviderAWS(ProviderBase):
     def _create_volume(self, volume, snapshot=None):
         node = self.__get_node(volume)
         ebs = self.client.create_volume(
-            size=volume.size_gb, name=node.name,
+            size=volume.size_gb, name=volume.group,
             ex_volume_type=self.credential.ebs_type,
             ex_iops=self.credential.iops,
             location=self.__get_location(node),
@@ -119,6 +119,8 @@ class ProviderAWS(ProviderBase):
         volume.path = self.credential.next_device(volume.owner_address)
 
     def _add_access(self, volume, to_address):
+        volume.owner_address = to_address
+        volume.save()
         return
 
     def _delete_volume(self, volume):
