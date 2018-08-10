@@ -51,13 +51,10 @@ class ProviderAWS(ProviderBase):
                 return location
 
     def __get_ebs(self, volume):
-        ebs = self.client.list_volumes(volume=SimpleEbs(volume.identifier))
-        if len(ebs) != 1:
-            return None
-        ebs = ebs[0]
-        if ebs.id != volume.identifier:
-            return None
-        return ebs
+        for ebs in self.client.list_volumes():
+            if ebs.id == volume.identifier:
+                return ebs
+        return None
 
     def __waiting_be(self, state, volume):
         ebs = self.__get_ebs(volume)
