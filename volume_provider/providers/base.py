@@ -84,12 +84,10 @@ class ProviderBase(object):
         raise NotImplementedError
 
     def get_volume(self, identifier_or_path):
-        if identifier_or_path.isdigit():
-            try:
-                return Volume.objects(identifier=identifier_or_path).get()
-            except Volume.DoesNotExist:
-                return None
-
+        try:
+            return Volume.objects(identifier=identifier_or_path).get()
+        except Volume.DoesNotExist:
+            pass
         try:
             return Volume.objects(path__icontains=identifier_or_path).get()
         except Volume.DoesNotExist:
@@ -161,6 +159,13 @@ class CommandsBase(object):
         return self._mount(volume)
 
     def _mount(self, volume):
+        raise NotImplementedError
+
+    def umount(self, identifier):
+        volume = Volume.objects(identifier=identifier).get()
+        return self._umount(volume)
+
+    def _umount(self, volume):
         raise NotImplementedError
 
     def clean_up(self, identifier):

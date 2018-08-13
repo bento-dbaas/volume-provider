@@ -5,7 +5,7 @@ class Volume(Document):
     size_kb = IntField(required=True)
     group = StringField(max_length=50, required=True)
     resource_id = StringField(max_length=255, required=True)
-    identifier = IntField(required=True)
+    identifier = StringField(required=True)
     path = StringField(max_length=1000, required=True)
     owner_address = StringField(max_length=20, required=True)
 
@@ -29,6 +29,21 @@ class Volume(Document):
             'path': self.path,
             'owner_address': self.owner_address,
         }
+
+    @property
+    def pairs(self):
+        return Volume.objects(group=self.group).all()
+
+    def convert_kb_to_gb(self, size_kb):
+        return int((int(size_kb)/1024)/1024)
+
+    @property
+    def size_gb(self):
+        return self.convert_kb_to_gb(self.size_kb)
+
+    @property
+    def snapshots(self):
+        return Snapshot.objects.filter(volume=self)
 
 
 class Snapshot(Document):
