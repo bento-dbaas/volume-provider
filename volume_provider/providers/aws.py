@@ -2,6 +2,7 @@ from collections import namedtuple
 from time import sleep
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
+from volume_provider.settings import AWS_PROXY
 from volume_provider.credentials.aws import CredentialAWS, CredentialAddAWS
 from volume_provider.providers.base import ProviderBase, CommandsBase
 
@@ -24,11 +25,18 @@ class ProviderAWS(ProviderBase):
 
     def build_client(self):
         cls = get_driver(Provider.EC2)
-        return cls(
+        client = cls(
             self.credential.access_id,
             self.credential.secret_key,
-            region=self.credential.region
+            region=self.credential.region,
+            **{'proxy_url': AWS_PROXY} if AWS_PROXY else {}
         )
+
+        if AWS_PROXY:
+            client.connection.connection.session.proxies.update({
+                'https': AWS_PROXY.replace('http://', 'https://')
+            })
+        return client
 
     def build_credential(self):
         return CredentialAWS(self.provider, self.environment)

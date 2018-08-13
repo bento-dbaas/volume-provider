@@ -20,3 +20,6 @@ else:
 
 APP_USERNAME = getenv("APP_USERNAME", None)
 APP_PASSWORD = getenv("APP_PASSWORD", None)
+
+
+AWS_PROXY = getenv("AWS_PROXY", None)
