@@ -174,7 +174,7 @@ class CommandsAWS(CommandsBase):
     def _mount(self, volume):
         self.provider.mount(volume)
         device = "/dev/xv{}".format(volume.path.split('/')[-1][-2:])
-        command = 'yum -y install xfsprogs'
+        command = 'yum clean all && yum -y install xfsprogs'
         command += """ &&
 formatted=$(blkid -o value -s TYPE {0} | grep xfs | wc -l)
 if [ "$formatted" -eq 0 ]
