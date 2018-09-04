@@ -87,11 +87,11 @@ class FaaSClient(object):
             export.identifier, snapshot.identifier
         )
 
-    def wait_for_job_finished(self, job, attempts=50, interval=30):
+    def wait_for_job_finished(self, job_id, attempts=50, interval=30):
         job_result = None
         for i in range(attempts):
             sleep(interval)
-            job = self.execute(self.client.jobs_get, 200, job)
+            job = self.execute(self.client.jobs_get, 200, job_id)
             if job['status'] == 'finished':
                 job_result = job['result']
                 break
