@@ -145,7 +145,7 @@ class ProviderAWS(ProviderBase):
 
     def _take_snapshot(self, volume, snapshot):
         ebs = self.__get_ebs(volume)
-        new_snapshot = self.client.create_volume_snapshot(ebs)
+        new_snapshot = self.client.create_volume_snapshot(ebs, ex_metadata={'dbaas_bkp': 1})
         snapshot.identifier = new_snapshot.id
         snapshot.description = new_snapshot.name
 
@@ -198,5 +198,3 @@ fi """.format(device)
 
     def _clean_up(self, volume):
         return None
-
-
