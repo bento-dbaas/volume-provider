@@ -147,7 +147,7 @@ class ProviderAWS(ProviderBase):
     def _take_snapshot(self, volume, snapshot, team, engine, db_name):
         ebs = self.__get_ebs(volume)
         ex_metadata = TeamClient.make_tags(team, engine)
-        ex_metadata.update({'dbaas_bkp': 1,'engine': engine,'db_name': db_name,
+        ex_metadata.update({'Bkp_DBaaS': 1,'engine': engine,'db_name': db_name,
                             'team': team})
         new_snapshot = self.client.create_volume_snapshot(ebs,
                                                           ex_metadata=ex_metadata)
