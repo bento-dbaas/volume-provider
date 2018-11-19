@@ -5,6 +5,7 @@ from libcloud.compute.providers import get_driver
 from volume_provider.settings import AWS_PROXY
 from volume_provider.credentials.aws import CredentialAWS, CredentialAddAWS
 from volume_provider.providers.base import ProviderBase, CommandsBase
+from volume_provider.clients.team import TeamClient
 
 
 STATE_AVAILABLE = 'available'
@@ -143,9 +144,13 @@ class ProviderAWS(ProviderBase):
         new_size_gb = volume.convert_kb_to_gb(new_size_kb)
         self.client.ex_modify_volume(ebs, {'Size': new_size_gb})
 
-    def _take_snapshot(self, volume, snapshot):
+    def _take_snapshot(self, volume, snapshot, team, engine, db_name):
         ebs = self.__get_ebs(volume)
-        new_snapshot = self.client.create_volume_snapshot(ebs, ex_metadata={'dbaas_bkp': 1})
+        ex_metadata = TeamClient.make_tags(team, engine)
+        ex_metadata.update({'dbaas_bkp': 1,'engine': engine,'db_name': db_name,
+                            'team': team})
+        new_snapshot = self.client.create_volume_snapshot(ebs,
+                                                          ex_metadata=ex_metadata)
         snapshot.identifier = new_snapshot.id
         snapshot.description = new_snapshot.name
 
