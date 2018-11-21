@@ -24,7 +24,6 @@ class TeamClient(object):
 
     @classmethod
     def make_tags(cls, team_name, engine):
-        print(TEAM_API_URL)
 
         if not team_name or not cls.API_URL:
             return {}
