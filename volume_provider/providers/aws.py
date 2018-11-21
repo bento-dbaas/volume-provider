@@ -144,11 +144,19 @@ class ProviderAWS(ProviderBase):
         new_size_gb = volume.convert_kb_to_gb(new_size_kb)
         self.client.ex_modify_volume(ebs, {'Size': new_size_gb})
 
+    def __verify_none(self, dict_var, key, var):
+        if var:
+            dict_var.update({key: var})
+
     def _take_snapshot(self, volume, snapshot, team, engine, db_name):
         ebs = self.__get_ebs(volume)
-        ex_metadata = TeamClient.make_tags(team, engine)
-        ex_metadata.update({'Bkp_DBaaS': 1,'engine': engine,'db_name': db_name,
-                            'team': team})
+        ex_metadata = {}
+        if team and engine:
+            ex_metadata = TeamClient.make_tags(team, engine)
+        self.__verify_none(ex_metadata,'engine', engine)
+        self.__verify_none(ex_metadata, 'db_name', db_name)
+        self.__verify_none(ex_metadata, 'team', team)
+        
         new_snapshot = self.client.create_volume_snapshot(ebs,
                                                           ex_metadata=ex_metadata)
         snapshot.identifier = new_snapshot.id
