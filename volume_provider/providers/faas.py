@@ -1,6 +1,7 @@
+from volume_provider.clients.faas import FaaSClient
 from volume_provider.credentials.faas import CredentialFaaS, CredentialAddFaaS
 from volume_provider.providers.base import ProviderBase, CommandsBase
-from volume_provider.clients.faas import FaaSClient
+from volume_provider.utils.uuid_helper import is_uuid4
 
 
 class ProviderFaaS(ProviderBase):
@@ -22,7 +23,10 @@ class ProviderFaaS(ProviderBase):
         return CredentialAddFaaS
 
     def _create_volume(self, volume):
-        export = self.client.create_export(volume.size_kb, volume.resource_id)
+        resource_id = None
+        if volume.resource_id and is_uuid4(volume.resource_id):
+            resource_id = volume.resource_id
+        export = self.client.create_export(volume.size_kb, resource_id)
         volume.identifier = str(export['id'])
         volume.resource_id = export['resource_id']
         volume.path = export['full_path']
