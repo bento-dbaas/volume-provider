@@ -156,7 +156,7 @@ class ProviderAWS(ProviderBase):
         self.__verify_none(ex_metadata,'engine', engine)
         self.__verify_none(ex_metadata, 'db_name', db_name)
         self.__verify_none(ex_metadata, 'team', team)
-        
+
         new_snapshot = self.client.create_volume_snapshot(ebs,
                                                           ex_metadata=ex_metadata)
         snapshot.identifier = new_snapshot.id
