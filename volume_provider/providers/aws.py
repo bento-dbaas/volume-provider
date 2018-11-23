@@ -2,7 +2,7 @@ from collections import namedtuple
 from time import sleep
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
-from volume_provider.settings import AWS_PROXY
+from volume_provider.settings import AWS_PROXY, TAG_BACKUP_DBAAS
 from volume_provider.credentials.aws import CredentialAWS, CredentialAddAWS
 from volume_provider.providers.base import ProviderBase, CommandsBase
 from volume_provider.clients.team import TeamClient
@@ -145,17 +145,18 @@ class ProviderAWS(ProviderBase):
         self.client.ex_modify_volume(ebs, {'Size': new_size_gb})
 
     def __verify_none(self, dict_var, key, var):
-        dict_var.update(**{key: var} if var else {})
+        if var:
+            dict_var[key] = var
 
     def _take_snapshot(self, volume, snapshot, team, engine, db_name):
         ebs = self.__get_ebs(volume)
         ex_metadata = {}
-        ex_metadata.update({'Bkp_DBaaS': 1})
         if team and engine:
-            ex_metadata.update(TeamClient.make_tags(team, engine))
-        self.__verify_none(ex_metadata,'engine', engine)
+            ex_metadata = TeamClient.make_tags(team, engine)
+        self.__verify_none(ex_metadata, 'engine', engine)
         self.__verify_none(ex_metadata, 'db_name', db_name)
         self.__verify_none(ex_metadata, 'team', team)
+        self.__verify_none(ex_metadata, TAG_BACKUP_DBAAS, 1)
 
         new_snapshot = self.client.create_volume_snapshot(ebs,
                                                           ex_metadata=ex_metadata)
