@@ -260,6 +260,22 @@ def remove_snapshot(provider_name, env, identifier):
 
 
 @app.route(
+    "/<string:provider_name>/<string:env>/snapshot/<string:identifier>",
+    methods=['GET']
+)
+@auth.login_required
+def can_remove_snapshot(provider_name, env, identifier):
+    try:
+        provider_cls = get_provider_to(provider_name)
+        provider = provider_cls(env)
+        res = provider.can_remove_snapshot(identifier)
+    except Exception as e:  # TODO What can get wrong here?
+        print_exc()  # TODO Improve log
+        return response_invalid_request(str(e))
+    return response_ok(can_remove=res)
+
+
+@app.route(
     "/<string:provider_name>/<string:env>/snapshot/<string:identifier>/restore",
     methods=['POST']
 )

@@ -1,5 +1,6 @@
 from collections import namedtuple
 from time import sleep
+from traceback import print_exc
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
 from volume_provider.settings import AWS_PROXY
@@ -161,6 +162,13 @@ class ProviderAWS(ProviderBase):
     def _remove_snapshot(self, snapshot):
         ebs_snapshot = self.__get_snapshot(snapshot)
         ebs_snapshot.destroy()
+
+    def _remove(self, snapshot):
+        try:
+            ebs_snapshot = self.__get_snapshot(snapshot)
+        except OSError as e:
+            return True
+        return False
 
     def _restore_snapshot(self, snapshot, volume):
         ebs_snapshot = self.__get_snapshot(snapshot)
