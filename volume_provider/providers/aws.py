@@ -131,7 +131,7 @@ class ProviderAWS(ProviderBase):
 
     def _delete_volume(self, volume):
         for snapshot in volume.snapshots:
-            self._remove_snapshot(snapshot)
+            self._remove_snapshot(snapshot, True)
         ebs = self.__get_ebs(volume)
         self.__detach_volume(volume)
         self.client.destroy_volume(ebs)
