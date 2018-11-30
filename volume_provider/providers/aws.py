@@ -160,16 +160,15 @@ class ProviderAWS(ProviderBase):
         ))
 
     def _remove_snapshot(self, snapshot, force):
-        if force == "True":
+        if force:
             ebs_snapshot = self.__get_snapshot(snapshot)
             ebs_snapshot.destroy()
             return True
-        else:
-            try:
-                ebs_snapshot = self.__get_snapshot(snapshot)
-            except OSError as e:
-                return True
-            return False
+        try:
+            ebs_snapshot = self.__get_snapshot(snapshot)
+        except OSError as e:
+            return True
+        return False
 
     def _restore_snapshot(self, snapshot, volume):
         ebs_snapshot = self.__get_snapshot(snapshot)

@@ -249,7 +249,7 @@ def take_snapshot(provider_name, env, identifier):
 )
 @auth.login_required
 def remove_snapshot(provider_name, env, identifier):
-    force = request.args.get('force')
+    force = bool(int(request.args.get('force', '0')))
     try:
         provider_cls = get_provider_to(provider_name)
         provider = provider_cls(env)
