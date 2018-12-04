@@ -43,7 +43,7 @@ class ProviderFaaS(ProviderBase):
     def _resize(self, volume, new_size_kb):
         self.client.resize(volume, new_size_kb)
 
-    def _take_snapshot(self, volume, snapshot):
+    def _take_snapshot(self, volume, snapshot, *args):
         new_snapshot = self.client.create_snapshot(volume)
         snapshot.identifier = str(new_snapshot['snapshot']['id'])
         snapshot.description = new_snapshot['snapshot']['name']

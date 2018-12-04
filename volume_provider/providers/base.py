@@ -116,14 +116,14 @@ class ProviderBase(object):
     def _resize(self, volume, new_size_kb):
         raise NotImplementedError
 
-    def take_snapshot(self, identifier):
+    def take_snapshot(self, identifier, team, engine, db_name):
         volume = Volume.objects(identifier=identifier).get()
         snapshot = Snapshot(volume=volume)
-        self._take_snapshot(volume, snapshot)
+        self._take_snapshot(volume, snapshot, team, engine, db_name)
         snapshot.save()
         return snapshot
 
-    def _take_snapshot(self, volume, snapshot):
+    def _take_snapshot(self, volume, snapshot, team, engine, db_name):
         raise NotImplementedError
 
     def remove_snapshot(self, identifier, force=False):
