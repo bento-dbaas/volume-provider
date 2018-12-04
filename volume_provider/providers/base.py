@@ -126,12 +126,14 @@ class ProviderBase(object):
     def _take_snapshot(self, volume, snapshot):
         raise NotImplementedError
 
-    def remove_snapshot(self, identifier):
+    def remove_snapshot(self, identifier, force=False):
         snapshot = Snapshot.objects(identifier=identifier).get()
-        self._remove_snapshot(snapshot)
-        snapshot.delete()
+        removed = self._remove_snapshot(snapshot, force)
+        if removed:
+            snapshot.delete()
+        return removed
 
-    def _remove_snapshot(self, snapshot):
+    def _remove_snapshot(self, snapshot, force):
         raise NotImplementedError
 
     def restore_snapshot(self, identifier):

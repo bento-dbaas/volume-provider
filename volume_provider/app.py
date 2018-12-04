@@ -249,14 +249,15 @@ def take_snapshot(provider_name, env, identifier):
 )
 @auth.login_required
 def remove_snapshot(provider_name, env, identifier):
+    force = bool(int(request.args.get('force', '0')))
     try:
         provider_cls = get_provider_to(provider_name)
         provider = provider_cls(env)
-        provider.remove_snapshot(identifier)
+        removed = provider.remove_snapshot(identifier, force)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
-    return response_ok()
+    return response_ok(removed=removed)
 
 
 @app.route(

@@ -48,8 +48,9 @@ class ProviderFaaS(ProviderBase):
         snapshot.identifier = str(new_snapshot['snapshot']['id'])
         snapshot.description = new_snapshot['snapshot']['name']
 
-    def _remove_snapshot(self, snapshot):
+    def _remove_snapshot(self, snapshot, force):
         self.client.delete_snapshot(snapshot.volume, snapshot)
+        return True
 
     def _restore_snapshot(self, snapshot, volume):
         restore_job = self.client.restore_snapshot(snapshot.volume, snapshot)
