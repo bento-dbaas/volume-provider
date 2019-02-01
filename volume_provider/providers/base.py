@@ -152,20 +152,22 @@ class ProviderBase(object):
 
 class CommandsBase(object):
 
-    @property
-    def data_directory(self):
-        return "/data"
+    def __init__(self, data_directory="/data"):
+        self.data_directory = data_directory
 
-    def mount(self, identifier):
+    def copy_files(self, *args, **kw):
+        return self._copy_files(*args, **kw)
+
+    def mount(self, identifier, fstab=True):
         volume = Volume.objects(identifier=identifier).get()
-        return self._mount(volume)
+        return self._mount(volume, fstab=fstab)
 
     def _mount(self, volume):
         raise NotImplementedError
 
-    def umount(self, identifier):
+    def umount(self, identifier, data_directory):
         volume = Volume.objects(identifier=identifier).get()
-        return self._umount(volume)
+        return self._umount(volume, data_directory=data_directory)
 
     def _umount(self, volume):
         raise NotImplementedError

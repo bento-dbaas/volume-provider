@@ -2,6 +2,7 @@ from volume_provider.clients.faas import FaaSClient
 from volume_provider.credentials.faas import CredentialFaaS, CredentialAddFaaS
 from volume_provider.providers.base import ProviderBase, CommandsBase
 from volume_provider.utils.uuid_helper import is_uuid4
+from volume_provider.models import Snapshot
 
 
 class ProviderFaaS(ProviderBase):
@@ -62,10 +63,25 @@ class ProviderFaaS(ProviderBase):
 
 class CommandsFaaS(CommandsBase):
 
-    def _mount(self, volume):
+    def _copy_files(self, snap_identifier, source_dir, dest_dir):
+        snap = Snapshot.objects(identifier=snap_identifier).get()
         script = self.die_if_error_script()
-        script += self.fstab_script(volume.path, self.data_directory)
-        script += self.mount_script(self.data_directory)
+        script += 'cp -rp {}/.snapshot/{}/* {}'.format(
+            source_dir,
+            snap.description,
+            dest_dir
+        )
+
+        return script
+
+    def _mount(self, volume, fstab=True):
+        script = self.die_if_error_script()
+        if fstab:
+            script += self.fstab_script(volume.path, self.data_directory)
+        script += self.mount_script(
+            self.data_directory,
+            filer_path=volume.path if not fstab else ''
+        )
         return script
 
     def die_if_error_script(self):
@@ -88,25 +104,29 @@ echo "{filer_path} {mount_path} nfs defaults,bg,intr,nolock 0 0" >> /etc/fstab
 die_if_error "Error setting fstab"
 """.format(mount_path=mount_path, filer_path=filer_path)
 
-    def mount_script(self, mount_path):
+    def mount_script(self, mount_path, filer_path=''):
+        directory_name = mount_path.lstrip("/").split("/")[0]
         return """
+mkdir -p {mount_path}
 if mount | grep {mount_path} > /dev/null; then
     umount {mount_path}
     die_if_error "Error umount {mount_path}"
 fi
-mount {mount_path}
+mount {filer_path} {mount_path}
 die_if_error "Error mounting {mount_path}"
-wcl=$(mount -l | grep data | grep nfs | wc -l)
+wcl=$(mount -l | grep {directory_name} | grep nfs | wc -l)
 if [ "$wcl" -eq 0 ]
 then
-    echo "Could not mount /data"
+    echo "Could not mount {mount_path}"
     exit 1
 fi
-""".format(mount_path=mount_path)
+""".format(filer_path=filer_path,
+           mount_path=mount_path,
+           directory_name=directory_name)
 
-    def _umount(self, volume):
+    def _umount(self, volume, data_directory):
         script = self.die_if_error_script()
-        script += 'umount /data'
+        script += 'umount {}'.format(data_directory)
         return script
 
     def _clean_up(self, volume):

@@ -282,14 +282,35 @@ def restore_snapshot(provider_name, env, identifier):
 
 @app.route(
     "/<string:provider_name>/<string:env>/commands/<string:identifier>/mount",
-    methods=['GET']
+    methods=['POST']
 )
 @auth.login_required
 def command_mount(provider_name, env, identifier):
+    data = request.get_json()
+    with_fstab = data.get("with_fstab", True)
+    data_directory = data.get("data_directory", "/data")
     try:
         provider_cls = get_provider_to(provider_name)
         provider = provider_cls(env)
-        command = provider.commands.mount(identifier)
+        provider.commands.data_directory = data_directory
+        command = provider.commands.mount(identifier, fstab=with_fstab)
+    except Exception as e:  # TODO What can get wrong here?
+        print_exc()  # TODO Improve log
+        return response_invalid_request(str(e))
+    return response_ok(command=command)
+
+
+@app.route(
+    "/<string:provider_name>/<string:env>/commands/copy_files",
+    methods=['POST']
+)
+@auth.login_required
+def command_copy_files(provider_name, env):
+    data = request.get_json()
+    try:
+        provider_cls = get_provider_to(provider_name)
+        provider = provider_cls(env)
+        command = provider.commands.copy_files(**data)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
@@ -298,14 +319,19 @@ def command_mount(provider_name, env, identifier):
 
 @app.route(
     "/<string:provider_name>/<string:env>/commands/<string:identifier>/umount",
-    methods=['GET']
+    methods=['POST']
 )
 @auth.login_required
 def command_umount(provider_name, env, identifier):
+    data = request.get_json()
+    data_directory = data.get("data_directory", "/data")
     try:
         provider_cls = get_provider_to(provider_name)
         provider = provider_cls(env)
-        command = provider.commands.umount(identifier)
+        command = provider.commands.umount(
+            identifier,
+            data_directory=data_directory
+        )
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
