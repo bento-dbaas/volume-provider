@@ -193,7 +193,7 @@ class CommandsAWS(CommandsBase):
     def __init__(self, provider):
         self.provider = provider
 
-    def _mount(self, volume):
+    def _mount(self, volume, *args, **kw):
         self.provider.mount(volume)
         device = "/dev/xv{}".format(volume.path.split('/')[-1][-2:])
         command = 'yum clean all && yum -y install xfsprogs'
@@ -214,7 +214,7 @@ fi """.format(device)
         command += ' && echo "{filer_path}  {mount_path}    xfs defaults    0   0" >> /etc/fstab'
         return command.format(mount_path=mount_path, filer_path=filer_path)
 
-    def _umount(self, volume):
+    def _umount(self, volume, *args, **kw):
         self.provider.umount(volume)
         return "umount {}".format(self.data_directory)
 
