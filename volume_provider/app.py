@@ -115,6 +115,7 @@ def create_volume(provider_name, env):
     group = data.get("group", None)
     size_kb = data.get("size_kb", None)
     to_address = data.get("to_address", None)
+    snapshot_id = data.get("snapshot_id", None)
 
     if not(group and size_kb and to_address):
         return response_invalid_request("Invalid data {}".format(data))
@@ -122,7 +123,7 @@ def create_volume(provider_name, env):
     try:
         provider_cls = get_provider_to(provider_name)
         provider = provider_cls(env)
-        volume = provider.create_volume(group, size_kb, to_address)
+        volume = provider.create_volume(group, size_kb, to_address, snapshot_id=snapshot_id)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))

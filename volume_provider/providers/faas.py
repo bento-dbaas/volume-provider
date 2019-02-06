@@ -23,7 +23,7 @@ class ProviderFaaS(ProviderBase):
     def get_credential_add(self):
         return CredentialAddFaaS
 
-    def _create_volume(self, volume):
+    def _create_volume(self, volume, *args, **kw):
         resource_id = None
         if volume.resource_id and is_uuid4(volume.resource_id):
             resource_id = volume.resource_id

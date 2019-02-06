@@ -114,6 +114,8 @@ class ProviderAWS(ProviderBase):
 
     def _create_volume(self, volume, snapshot=None):
         node = self.__get_node(volume)
+        if snapshot:
+            snapshot = self.__get_snapshot(snapshot)
         ebs = self.client.create_volume(
             size=volume.size_gb, name=volume.group,
             ex_volume_type=self.credential.ebs_type,
