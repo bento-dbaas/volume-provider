@@ -74,6 +74,22 @@ class CommandsFaaS(CommandsBase):
 
         return script
 
+    def _scp(self, snap, source_dir, target_ip, target_dir):
+        script = self.die_if_error_script()
+        script += self.scp_script(
+            snap_dir=snap.description,
+            source_dir=source_dir,
+            target_ip=target_ip,
+            target_dir=target_dir
+        )
+        return script
+
+    def scp_script(self, **kw):
+        return """
+scp -i "/root/.ssh/dbaas.key" -Crp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null {source_dir}/.snapshot/{snap_dir}/* root@{target_ip}:{target_dir}
+die_if_error "Error scp from {snap_dir} to {target_ip}:{target_dir}"
+""".format(**kw)
+
     def _mount(self, volume, fstab=True):
         script = self.die_if_error_script()
         if fstab:
