@@ -195,7 +195,24 @@ class CommandsAWS(CommandsBase):
     def __init__(self, provider):
         self.provider = provider
 
+    def _scp(self, snap, source_dir, target_ip, target_dir):
+        script = self.die_if_error_script()
+        script += self.scp_script(
+            source_dir=source_dir,
+            target_ip=target_ip,
+            target_dir=target_dir
+        )
+        return script
+
+    def scp_script(self, **kw):
+        return """
+scp -i "/root/.ssh/dbaas.key" -Crp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null {source_dir}/* root@{target_ip}:{target_dir}
+die_if_error "Error scp from {source_dir} to {target_ip}:{target_dir}"
+""".format(**kw)
+
     def _mount(self, volume, *args, **kw):
+        fstab = kw.get('fstab')
+        mount_devide = ''
         self.provider.mount(volume)
         device = "/dev/xv{}".format(volume.path.split('/')[-1][-2:])
         command = 'yum clean all && yum -y install xfsprogs'
