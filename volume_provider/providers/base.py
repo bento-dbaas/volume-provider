@@ -158,12 +158,87 @@ class CommandsBase(object):
     def __init__(self, data_directory="/data"):
         self.data_directory = data_directory
 
+    def die_if_error_script(self):
+        return """
+die_if_error()
+{
+    local err=$?
+    if [ "$err" != "0" ]; then
+        echo "$*"
+        exit $err
+    fi
+}
+"""
     def copy_files(self, *args, **kw):
         return self._copy_files(*args, **kw)
 
     def mount(self, identifier, fstab=True):
         volume = Volume.objects(identifier=identifier).get()
         return self._mount(volume, fstab=fstab)
+        
+    def scp(self, identifier, source_dir, target_ip, target_dir):
+        snap = Snapshot.objects(identifier=identifier).get()
+        return self._scp(snap, source_dir, target_ip, target_dir)
+
+    def _scp(self, snap, target_ip, target_directory):
+        raise NotImplementedError
+
+    def add_hosts_allow(self, host_ip):
+        return self._add_hosts_allow(host_ip)
+
+    def remove_hosts_allow(self, host_ip):
+        return self._remove_hosts_allow(host_ip)
+
+    def _add_hosts_allow(self, host_ip):
+        script = self.die_if_error_script()
+        script += self.add_hosts_allow_script(host_ip=host_ip)
+        return script
+
+    def _remove_hosts_allow(self, host_ip):
+        script = self.die_if_error_script()
+        script += self.remove_hosts_allow_script(host_ip=host_ip)
+        return script
+
+    def add_hosts_allow_script(self, **kw):
+        return """
+echo "sshd: {host_ip}     - Host Migrate" >> /etc/hosts.allow
+die_if_error "Erro on add {host_ip} on /etc/hosts.allow"
+""".format(**kw)
+
+    def remove_hosts_allow_script(self, **kw):
+        return """
+sed -i -e "/sshd: {host_ip}     - Host Migrate/d" /etc/hosts.allow
+die_if_error "Erro on remove {host_ip} from /etc/hosts.allow"
+""".format(**kw)
+
+    def create_pub_key(self, host_ip):
+        return self._create_pub_key(host_ip)
+
+    def remove_pub_key(self, host_ip):
+        return self._remove_pub_key(host_ip)
+
+    def _create_pub_key(self, host_ip):
+        script = self.die_if_error_script()
+        script += self.create_pub_key_script(host_ip=host_ip)
+        return script
+
+    def _remove_pub_key(self, host_ip):
+        script = self.die_if_error_script()
+        script += self.remove_pub_key_script(host_ip=host_ip)
+        return script
+
+    def create_pub_key_script(self, **kw):
+        return """
+[ -f /root/.ssh/dbaas.key.pub ] || ssh-keygen -t rsa -N "" -f /root/.ssh/dbaas.key > /dev/null
+cat /root/.ssh/dbaas.key.pub
+die_if_error "Error to create public key dbaas"
+""".format(**kw)
+
+    def remove_pub_key_script(self, **kw):
+        return """
+rm -f /root/.ssh/dbaas.key*
+die_if_error "Error to remove public key dbaas"
+""".format(**kw)
 
     def _mount(self, volume):
         raise NotImplementedError
