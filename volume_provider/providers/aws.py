@@ -222,9 +222,15 @@ if [ "$formatted" -eq 0 ]
 then
     mkfs -t xfs {0}
 fi """.format(device)
-        command += ' && ' + self.fstab_script(device, self.data_directory)
+        if fstab:
+            command += ' && ' + self.fstab_script(device, self.data_directory)
+        else:
+            mount_devide = '-o nouuid {}'.format(device)
         command += ' && mkdir -p {}'.format(self.data_directory)
-        command += ' && mount {}'.format(self.data_directory)
+
+        command += ' && mount {} {}'.format(
+            mount_devide, self.data_directory
+        )
         return command
 
     def fstab_script(self, filer_path, mount_path):
