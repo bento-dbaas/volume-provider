@@ -302,6 +302,72 @@ def command_mount(provider_name, env, identifier):
 
 
 @app.route(
+    "/<string:provider_name>/<string:env>/snapshots/<string:identifier>/commands/scp",
+    methods=['GET']
+)
+@auth.login_required
+def command_scp_from_snap(provider_name, env, identifier):
+    data = request.get_json()
+    target_ip = data.get("target_ip")
+    target_dir = data.get("target_dir")
+    source_dir = data.get("source_dir")
+
+    if not(target_ip and target_dir and source_dir):
+        return response_invalid_request("Invalid data {}".format(data))
+    try:
+        provider_cls = get_provider_to(provider_name)
+        provider = provider_cls(env)
+        command = provider.commands.scp(
+            identifier,
+            source_dir,
+            target_ip,
+            target_dir
+        )
+    except Exception as e:  # TODO What can get wrong here?
+        print_exc()  # TODO Improve log
+        return response_invalid_request(str(e))
+    return response_ok(command=command)
+
+
+@app.route(
+    "/<string:provider_name>/<string:env>/commands/create_pub_key",
+    methods=['GET']
+)
+@auth.login_required
+def command_create_pub_key(provider_name, env):
+    keys_must_on_payload = ['host_ip']
+    return _command(provider_name, env, 'create_pub_key', keys_must_on_payload)
+
+
+@app.route(
+    "/<string:provider_name>/<string:env>/commands/remove_pub_key",
+    methods=['GET']
+)
+@auth.login_required
+def command_remove_pub_key(provider_name, env):
+    keys_must_on_payload = ['host_ip']
+    return _command(provider_name, env, 'remove_pub_key', keys_must_on_payload)
+
+
+@app.route(
+    "/<string:provider_name>/<string:env>/commands/add_hosts_allow",
+    methods=['GET']
+)
+@auth.login_required
+def command_add_hosts_allow(provider_name, env):
+    return _command_hosts_allow(provider_name, env, 'add_hosts_allow')
+
+
+@app.route(
+    "/<string:provider_name>/<string:env>/commands/remove_hosts_allow",
+    methods=['GET']
+)
+@auth.login_required
+def command_remove_hosts_allow(provider_name, env):
+    return _command_hosts_allow(provider_name, env, 'remove_hosts_allow')
+
+
+@app.route(
     "/<string:provider_name>/<string:env>/commands/copy_files",
     methods=['POST']
 )
@@ -354,6 +420,43 @@ def cleanup(provider_name, env, identifier):
         return response_invalid_request(str(e))
     return response_ok(command=command)
 
+
+def _validate_payload(keys):
+    data = request.get_json()
+    data_keys = data.keys()
+    return all(k in data_keys for k in keys), data
+
+
+def _command(provider_name, env, func_name, keys_must_on_payload):
+    is_valid, data = _validate_payload(keys_must_on_payload)
+    if not(is_valid):
+        return response_invalid_request("Invalid data {}".format(data))
+    try:
+        provider_cls = get_provider_to(provider_name)
+        provider = provider_cls(env)
+        func = getattr(provider.commands, func_name)
+        command = func(**data)
+    except Exception as e:  # TODO What can get wrong here?
+        print_exc()  # TODO Improve log
+        return response_invalid_request(str(e))
+    return response_ok(command=command)
+
+
+def _command_hosts_allow(provider_name, env, func_name):
+    data = request.get_json()
+    host_ip = data.get("host_ip")
+
+    if not(host_ip):
+        return response_invalid_request("Invalid data {}".format(data))
+    try:
+        provider_cls = get_provider_to(provider_name)
+        provider = provider_cls(env)
+        func = getattr(provider.commands, func_name)
+        command = func(host_ip)
+    except Exception as e:  # TODO What can get wrong here?
+        print_exc()  # TODO Improve log
+        return response_invalid_request(str(e))
+    return response_ok(command=command)
 
 def response_invalid_request(error, status_code=500):
     return _response(status_code, error=error)
