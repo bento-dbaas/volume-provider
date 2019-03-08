@@ -241,7 +241,7 @@ fi """.format(device)
 
     def _umount(self, volume, *args, **kw):
         self.provider.umount(volume)
-        return "umount {}".format(self.data_directory)
+        return "umount {}".format(kw.get('data_directory', '/data'))
 
     def _clean_up(self, volume):
         return None
