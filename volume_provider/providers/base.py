@@ -119,6 +119,10 @@ class ProviderBase(object):
     def _resize(self, volume, new_size_kb):
         raise NotImplementedError
 
+    def get_snapshot_status(self, identifier):
+        snap = Snapshot.objects(identifier=identifier).get()
+        return self._get_snapshot_status(snap)
+
     def take_snapshot(self, identifier, team, engine, db_name):
         volume = Volume.objects(identifier=identifier).get()
         snapshot = Snapshot(volume=volume)
@@ -175,7 +179,7 @@ die_if_error()
     def mount(self, identifier, fstab=True):
         volume = Volume.objects(identifier=identifier).get()
         return self._mount(volume, fstab=fstab)
-        
+
     def scp(self, identifier, source_dir, target_ip, target_dir):
         snap = Snapshot.objects(identifier=identifier).get()
         return self._scp(snap, source_dir, target_ip, target_dir)

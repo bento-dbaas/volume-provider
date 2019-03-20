@@ -249,6 +249,24 @@ def take_snapshot(provider_name, env, identifier):
 
 
 @app.route(
+    "/<string:provider_name>/<string:env>/snapshot/<string:identifier>/state",
+    methods=['GET']
+)
+@auth.login_required
+def get_snapshot_status(provider_name, env, identifier):
+    try:
+        provider_cls = get_provider_to(provider_name)
+        provider = provider_cls(env)
+        state = provider.get_snapshot_status(identifier)
+    except Exception as e:  # TODO What can get wrong here?
+        print_exc()  # TODO Improve log
+        return response_invalid_request(str(e))
+    return response_ok(
+        state=state
+    )
+
+
+@app.route(
     "/<string:provider_name>/<string:env>/snapshot/<string:identifier>",
     methods=['DELETE']
 )

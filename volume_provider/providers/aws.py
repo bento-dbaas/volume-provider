@@ -1,3 +1,4 @@
+from os import getenv
 from collections import namedtuple
 from time import sleep
 from traceback import print_exc
@@ -66,7 +67,11 @@ class ProviderAWS(ProviderBase):
                 return ebs
         return None
 
-    def __waiting_be(self, state, volume):
+    def _get_snapshot_status(self, snapshot):
+        ebs_snapshot = self.__get_snapshot(snapshot)
+        return ebs_snapshot.state
+
+    def waiting_be(self, state, volume):
         ebs = self.__get_ebs(volume)
         for _ in range(ATTEMPTS):
             if ebs.state == state:
@@ -78,10 +83,10 @@ class ProviderAWS(ProviderBase):
         ))
 
     def __waiting_be_available(self, volume):
-        return self.__waiting_be(STATE_AVAILABLE, volume)
+        return self.waiting_be(STATE_AVAILABLE, volume)
 
     def __waiting_be_in_use(self, volume):
-        return self.__waiting_be(STATE_INUSE, volume)
+        return self.waiting_be(STATE_INUSE, volume)
 
     def mount(self, volume):
         node = self.__get_node(volume)
@@ -215,7 +220,10 @@ die_if_error "Error scp from {source_dir} to {target_ip}:{target_dir}"
         mount_devide = ''
         self.provider.mount(volume)
         device = "/dev/xv{}".format(volume.path.split('/')[-1][-2:])
-        command = 'yum clean all && yum -y install xfsprogs'
+        extra_mount_command = getenv('EXTRA_MOUNT_COMMAND', '')
+        command = '{} yum clean all && yum -y install xfsprogs'.format(
+            extra_mount_command
+        )
         command += """ &&
 formatted=$(blkid -o value -s TYPE {0} | grep xfs | wc -l)
 if [ "$formatted" -eq 0 ]
