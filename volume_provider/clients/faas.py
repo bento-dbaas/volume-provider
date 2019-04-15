@@ -1,4 +1,4 @@
-from logging import info
+from logging import info, error
 from time import sleep
 from faasclient.client import Client
 from volume_provider.clients.errors import APIError
@@ -23,7 +23,7 @@ class FaaSClient(object):
 
     def execute(self, call, expected_code, *args):
         status, content = call(*args)
-        info("[FaaS] Response from {} with {}: {} - {}".format(
+        error("[FaaS] Response from {} with {}: {} - {}".format(
             call, args, status, content
         ))
         if status != expected_code:
@@ -35,9 +35,7 @@ class FaaSClient(object):
         return self.execute(self.client.export_create, 201, size_kb, self.credential.category_id, resource_id)
 
     def delete_export(self, export):
-        self.create_access(export, export.owner_address)
-        #self.delete_all_disk_files(export) TODO Host Provider execute command
-        return self.execute(self.client.export_delete, 200, export.identifier)
+        return self.execute(self.client.export_force_delete, 200, export.identifier)
 
     def list_access(self, export):
         return self.execute(self.client.access_list, 200, export.identifier)
@@ -48,7 +46,9 @@ class FaaSClient(object):
                 return access
 
     def create_access(self, export, address):
+        error("Check acess for {}:{}".format(export.identifier, address))
         access = self.check_access_exist(export, address)
+        error("access {}".format(access))
         if access:
             return access
         return self.execute(
