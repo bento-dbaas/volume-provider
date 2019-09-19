@@ -35,8 +35,8 @@ class ProviderFaaS(ProviderBase):
         volume.resource_id = export['resource_id']
         volume.path = export['full_path']
 
-    def _add_access(self, volume, to_address):
-        self.client.create_access(volume, to_address)
+    def _add_access(self, volume, to_address, access_type=None):
+        self.client.create_access(volume, to_address, access_type)
 
     def _delete_volume(self, volume):
         self.client.delete_export(volume)

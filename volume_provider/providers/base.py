@@ -96,9 +96,9 @@ class ProviderBase(object):
         except Volume.DoesNotExist:
             return None
 
-    def add_access(self, identifier, to_address):
+    def add_access(self, identifier, to_address, access_type=None):
         volume = Volume.objects(identifier=identifier).get()
-        self._add_access(volume, to_address)
+        self._add_access(volume, to_address, access_type)
 
     def _add_access(self, volume, to_address):
         raise NotImplementedError

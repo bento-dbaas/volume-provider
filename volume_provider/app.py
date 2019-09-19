@@ -173,6 +173,7 @@ def get_volume(provider_name, env, identifier_or_path):
 def add_volume_access(provider_name, env, identifier):
     data = request.get_json()
     to_address = data.get("to_address", None)
+    access_type = data.get("access_type", None)
 
     if not to_address:
         return response_invalid_request("Invalid data {}".format(data))
@@ -180,7 +181,7 @@ def add_volume_access(provider_name, env, identifier):
     try:
         provider_cls = get_provider_to(provider_name)
         provider = provider_cls(env)
-        provider.add_access(identifier, to_address)
+        provider.add_access(identifier, to_address, access_type)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))

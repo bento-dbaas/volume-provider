@@ -45,7 +45,7 @@ class FaaSClient(object):
             if access['host'] == address:
                 return access
 
-    def create_access(self, export, address):
+    def create_access(self, export, address, access_type=None):
         error("Check acess for {}:{}".format(export.identifier, address))
         access = self.check_access_exist(export, address)
         error("access {}".format(access))
@@ -53,7 +53,9 @@ class FaaSClient(object):
             return access
         return self.execute(
             self.client.access_create, 201,
-            export.identifier, self.credential.access_type, address
+            export.identifier,
+            access_type or self.credential.access_type,
+            address
         )
 
     def delete_access(self, export, address):
