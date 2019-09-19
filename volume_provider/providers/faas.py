@@ -66,13 +66,14 @@ class ProviderFaaS(ProviderBase):
 
 class CommandsFaaS(CommandsBase):
 
-    def _copy_files(self, snap_identifier, source_dir, dest_dir):
+    def _copy_files(self, snap_identifier, source_dir, dest_dir, snap_dir=''):
         snap = Snapshot.objects(identifier=snap_identifier).get()
         script = self.die_if_error_script()
-        script += 'cp -rp {}/.snapshot/{}/* {}'.format(
+        script += 'cp -rp {}/.snapshot/{}/{}* {}'.format(
             source_dir,
             snap.description,
-            dest_dir
+            snap_dir,
+            dest_dir,
         )
 
         return script
