@@ -54,3 +54,11 @@ class Snapshot(Document):
     @property
     def uuid(self):
         return str(self.pk)
+
+    def to_json(self):
+        return {
+            'id': self._id,
+            'identifier': self.identifier,
+            'path': self.description,
+            'volume': self.volume
+        }

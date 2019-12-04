@@ -239,13 +239,16 @@ def take_snapshot(provider_name, env, identifier):
     try:
         provider_cls = get_provider_to(provider_name)
         provider = provider_cls(env)
-        snapshot = provider.take_snapshot(identifier, team_name, engine, db_name)
+        snapshot = provider.take_snapshot(
+            identifier, team_name, engine, db_name
+        )
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
     return response_created(
         identifier=snapshot.identifier,
-        description=snapshot.description
+        description=snapshot.description,
+        volume_path=snapshot.volume.path
     )
 
 
