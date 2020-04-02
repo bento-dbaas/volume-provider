@@ -69,10 +69,16 @@ class CommandsFaaS(CommandsBase):
     def _copy_files(self, snap_identifier, source_dir, dest_dir, snap_dir=''):
         snap = Snapshot.objects(identifier=snap_identifier).get()
         script = self.die_if_error_script()
-        script += 'cp -rp {}/.snapshot/{}/{}* {}'.format(
+        source_path = '{}/.snapshot/{}/{}'.format(
             source_dir,
             snap.description,
-            snap_dir,
+            snap_dir
+        )
+        script += ('[ "$(find  {} -type f -name \"[!.]*\")" ] '
+                   '&& cp -rp {}* {} '
+                   '|| exit 0').format(
+            source_path,
+            source_path,
             dest_dir,
         )
 
