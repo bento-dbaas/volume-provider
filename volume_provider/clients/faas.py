@@ -30,12 +30,16 @@ class FaaSClient(object):
             raise APIError(status, content)
         return content
 
-
     def create_export(self, size_kb, resource_id):
         return self.execute(self.client.export_create, 201, size_kb, self.credential.category_id, resource_id)
 
     def delete_export(self, export):
-        return self.execute(self.client.export_force_delete, 200, export.identifier)
+        return self.execute(self.client.export_force_delete, 200,
+            export.identifier)
+
+    def export_get(self, export):
+        return self.execute(
+            self.client.export_get, 200, export.identifier)
 
     def list_access(self, export):
         return self.execute(self.client.access_list, 200, export.identifier)
