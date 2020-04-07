@@ -61,6 +61,8 @@ class ProviderFaaS(ProviderBase):
         job_result = self.client.wait_for_job_finished(restore_job['job'])
 
         volume.identifier = str(job_result['id'])
+        export = self.client.export_get(volume)
+        volume.resource_id = export['resource_id']
         volume.path = job_result['full_path']
 
 
