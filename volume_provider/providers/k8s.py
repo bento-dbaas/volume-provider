@@ -56,7 +56,8 @@ class ProviderK8s(ProviderBase):
         self.client.create_namespaced_persistent_volume_claim(
             kw.get('namespace', 'default'), self.yaml_file({
                 'STORAGE_NAME': kw.get('volume_name'),
-                'STORAGE_SIZE': volume.size_gb
+                'STORAGE_SIZE': volume.size_gb,
+                'STORAGE_TYPE': kw.get('storage_type', '')
             })
         )
         volume.identifier = kw.get('volume_name')

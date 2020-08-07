@@ -8,4 +8,6 @@ spec:
   resources:
     requests:
       storage: {{ STORAGE_SIZE }}Gi
-  storageClassName: faas
+{% if STORAGE_TYPE %}
+  storageClassName: {{ STORAGE_TYPE }}
+{% endif %}
