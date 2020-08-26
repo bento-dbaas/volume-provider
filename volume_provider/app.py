@@ -114,9 +114,8 @@ def create_volume(provider_name, env):
     data = request.get_json()
     group = data.get("group", None)
     size_kb = data.get("size_kb", None)
-    to_address = data.get("to_address", None)
 
-    if not(group and size_kb and to_address):
+    if not(group and size_kb):
         return response_invalid_request("Invalid data {}".format(data))
 
     try:
