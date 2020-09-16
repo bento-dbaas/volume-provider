@@ -28,6 +28,33 @@ class CredentialMongoDB(object):
     def content(self):
         return self._content
 
+    def save(self):
+        return self.credential.find_one_and_update(
+            {
+                'provider': self.provider,
+                'environment': self.environment
+            },
+            {'$set': {
+                'provider': self.provider,
+                'environment': self.environment,
+                **self.content
+            }},
+            upsert=True,
+            return_document=ReturnDocument.AFTER
+        )
+
+    def delete(self):
+        return self.credential.remove({
+            'provider': self.provider,
+            'environment': self.environment
+        })
+
+    def get_by(self, **kwargs):
+        return self.credential.find({'provider': self.provider, **kwargs})
+
+    def all(self, **kwargs):
+        return self.get_by()
+
 
 class CredentialBase(CredentialMongoDB):
 
@@ -49,44 +76,12 @@ class CredentialBase(CredentialMongoDB):
             self._content = self.get_content()
         return super(CredentialBase, self).content
 
-    def get_by(self, **kwargs):
-        return self.credential.find({'provider': self.provider, **kwargs})
-
-    def all(self, **kwargs):
-        return self.get_by()
-
-    def delete(self):
-        return self.credential.remove({
-            'provider': self.provider,
-            'environment': self.environment
-        })
-
 
 class CredentialAdd(CredentialMongoDB):
 
     def __init__(self, provider, environment, content):
         super(CredentialAdd, self).__init__(provider, environment)
         self._content = content
-
-    def save(self):
-        return self.credential.find_one_and_update(
-            {
-                'provider': self.provider,
-                'environment': self.environment
-            },
-            {'$set': {
-                'provider': self.provider,
-                'environment': self.environment,
-                **self.content
-            }},
-            upsert=True,
-            return_document=ReturnDocument.AFTER
-        )
-
-    def delete(self):
-        return self.credential.delete_one({
-            'provider': self.provider, 'environment': self.environment
-        })
 
     @property
     def valid_fields(self):
