@@ -26,7 +26,8 @@ class CredentialK8s(CredentialBase):
             "host": host
         }
         self._content = credential
-        return self.save()
+        self.save()
+        return True, ""
 
     def pool_remove(self, name):
         credential = self.content
@@ -34,7 +35,8 @@ class CredentialK8s(CredentialBase):
             return False, "The {} is not registered".format(name)
         del credential["pools"][name]
         self._content = credential
-        return self.save()
+        self.save()
+        return True, ""
 
 
 class CredentialAddK8s(CredentialAdd):

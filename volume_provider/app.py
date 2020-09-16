@@ -138,14 +138,13 @@ def remove_pool(provider_name, env, pool):
     try:
         provider_cls = get_provider_to(provider_name)
         provider = provider_cls(env)
-        deleted = provider.credential.pool_remove(pool)
+        success, message = provider.credential.pool_remove(pool)
     except Exception as e:
         print_exc()
         return response_invalid_request(str(e))
-
-    if deleted['n'] > 0:
-        return response_ok()
-    return response_not_found("{}-{}".format(provider_name, env))
+    if not success:
+        return response_invalid_request(message)
+    return response_ok()
 
 
 @app.route("/<string:provider_name>/<string:env>/volume/new", methods=['POST'])
@@ -517,6 +516,7 @@ def _command_hosts_allow(provider_name, env, func_name):
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
     return response_ok(command=command)
+
 
 def response_invalid_request(error, status_code=500):
     return _response(status_code, error=error)
