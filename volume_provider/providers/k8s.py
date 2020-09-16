@@ -1,6 +1,6 @@
 import jinja2
 import yaml
-from kubernetes import client, config
+from kubernetes.client import Configuration, ApiClient, CoreV1Api
 
 from volume_provider.credentials.k8s import CredentialK8s, CredentialAddK8s
 from volume_provider.providers.base import ProviderBase, CommandsBase
@@ -30,14 +30,12 @@ class ProviderK8s(ProviderBase):
         return yaml.safe_load(yaml_file)
 
     def build_client(self):
-        config.load_kube_config(
-            self.credential.kube_config_path
-        )
-
-        conf = client.configuration.Configuration()
-        conf.verify_ssl = False
-
-        return client.CoreV1Api(client.ApiClient(conf))
+        pool = self.credential.pools[self.pool]
+        configuration = Configuration()
+        configuration.api_key['authorization'] = pool['token']
+        configuration.host = pool['host']
+        api_client = ApiClient(configuration)
+        return CoreV1Api(api_client)
 
     def build_credential(self):
         return CredentialK8s(self.provider, self.environment)

@@ -3,11 +3,12 @@ from volume_provider.models import Volume, Snapshot
 
 class ProviderBase(object):
 
-    def __init__(self, environment):
+    def __init__(self, environment, pool=None):
         self.environment = environment
         self._client = None
         self._credential = None
         self._commands = None
+        self.pool = pool
 
     @property
     def client(self):
