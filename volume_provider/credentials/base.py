@@ -76,6 +76,12 @@ class CredentialBase(CredentialMongoDB):
             self._content = self.get_content()
         return super(CredentialBase, self).content
 
+    def pool_add(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def pool_remove(self, *args, **kwargs):
+        raise NotImplementedError
+
 
 class CredentialAdd(CredentialMongoDB):
 
