@@ -108,6 +108,46 @@ def destroy_credential(provider_name, env):
     return response_not_found("{}-{}".format(provider_name, env))
 
 
+@app.route(
+    "/<string:provider_name>/<string:env>/pool", methods=['POST']
+)
+@auth.login_required
+def add_pool(provider_name, env):
+    data = request.get_json()
+    if not data:
+        return response_invalid_request("No data".format(data))
+
+    try:
+        provider_cls = get_provider_to(provider_name)
+        provider = provider_cls(env)
+        success, message = provider.credential.pool_add(**data)
+    except Exception as e:
+        print_exc()
+        return response_invalid_request(str(e))
+
+    if not success:
+        return response_invalid_request(message)
+    return response_created(success=success, id=str(message))
+
+
+@app.route(
+    "/<string:provider_name>/<string:env>/<string:pool>", methods=['DELETE']
+)
+@auth.login_required
+def remove_pool(provider_name, env, pool):
+    try:
+        provider_cls = get_provider_to(provider_name)
+        provider = provider_cls(env)
+        deleted = provider.credential.pool_remove(pool)
+    except Exception as e:
+        print_exc()
+        return response_invalid_request(str(e))
+
+    if deleted['n'] > 0:
+        return response_ok()
+    return response_not_found("{}-{}".format(provider_name, env))
+
+
 @app.route("/<string:provider_name>/<string:env>/volume/new", methods=['POST'])
 @auth.login_required
 def create_volume(provider_name, env):
