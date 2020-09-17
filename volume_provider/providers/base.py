@@ -3,12 +3,12 @@ from volume_provider.models import Volume, Snapshot
 
 class ProviderBase(object):
 
-    def __init__(self, environment, pool=None):
+    def __init__(self, environment, pool_name=None):
         self.environment = environment
         self._client = None
         self._credential = None
         self._commands = None
-        self.pool = pool
+        self.pool_name = pool_name
 
     @property
     def client(self):
@@ -49,6 +49,10 @@ class ProviderBase(object):
     def provider(self):
         return self.get_provider()
 
+    @property
+    def pool(self):
+        return self.credential.pools[self.pool_name]
+
     @classmethod
     def get_provider(cls):
         raise NotImplementedError
@@ -70,7 +74,7 @@ class ProviderBase(object):
         volume.size_kb = size_kb
         volume.set_group(group)
         volume.owner_address = to_address
-        volume.pool = self.pool
+        volume.pool = self.pool_name
         self._create_volume(volume, snapshot=snapshot)
         self._add_access(volume, volume.owner_address)
         volume.save()
@@ -82,8 +86,8 @@ class ProviderBase(object):
 
     def load_volume(self, identifier, search_field="identifier"):
         volume = Volume.objects(search_field=identifier).get()
-        if not self.pool:
-            self.pool = volume.pool
+        if not self.pool_name:
+            self.pool_name = volume.pool
         return volume
 
     def delete_volume(self, identifier):
@@ -182,6 +186,7 @@ die_if_error()
     fi
 }
 """
+
     def copy_files(self, *args, **kw):
         return self._copy_files(*args, **kw)
 

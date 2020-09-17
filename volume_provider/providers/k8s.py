@@ -2,9 +2,9 @@ import jinja2
 import yaml
 from kubernetes.client import Configuration, ApiClient, CoreV1Api
 
+from volume_provider.utils.uuid_helper import generate_random_uuid
 from volume_provider.credentials.k8s import CredentialK8s, CredentialAddK8s
 from volume_provider.providers.base import ProviderBase, CommandsBase
-from volume_provider.models import Volume
 
 
 class ProviderK8s(ProviderBase):
@@ -30,10 +30,9 @@ class ProviderK8s(ProviderBase):
         return yaml.safe_load(yaml_file)
 
     def build_client(self):
-        pool = self.credential.pools[self.pool]
         configuration = Configuration()
-        configuration.api_key['authorization'] = pool['token']
-        configuration.host = pool['host']
+        configuration.api_key['authorization'] = self.pool['token']
+        configuration.host = self.pool['host']
         api_client = ApiClient(configuration)
         return CoreV1Api(api_client)
 
@@ -46,22 +45,16 @@ class ProviderK8s(ProviderBase):
     def _get_snapshot_status(self, snapshot):
         return 'available'
 
-    def create_volume(self, group, size_kb, to_address, snapshot_id=None,
-                      **kw):
-        volume = Volume()
-        volume.size_kb = int(size_kb)
-        volume.set_group(group)
+    def _create_volume(self, volume, snapshot=None):
+        volume.owner_address = ''
+        volume.identifier = generate_random_uuid()
         self.client.create_namespaced_persistent_volume_claim(
-            kw.get('namespace', 'default'), self.yaml_file({
-                'STORAGE_NAME': kw.get('volume_name'),
+            self.pool.get("namespace", "default"), self.yaml_file({
+                'STORAGE_NAME': volume.identifier,
                 'STORAGE_SIZE': volume.size_gb,
-                'STORAGE_TYPE': kw.get('storage_type', '')
+                'STORAGE_TYPE': self.pool.get('storage_type', '')
             })
         )
-        volume.identifier = kw.get('volume_name')
-        volume.resource_id = ''
-        volume.path = ''
-        volume.owner_address = ''
         volume.save()
 
         return volume
