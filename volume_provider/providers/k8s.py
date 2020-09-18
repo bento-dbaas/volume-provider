@@ -32,7 +32,7 @@ class ProviderK8s(ProviderBase):
     def build_client(self):
         configuration = Configuration()
         configuration.api_key['authorization'] = self.pool['token']
-        configuration.host = self.pool['host']
+        configuration.host = self.pool['endpoint']
         api_client = ApiClient(configuration)
         return CoreV1Api(api_client)
 
@@ -49,7 +49,8 @@ class ProviderK8s(ProviderBase):
         volume.owner_address = ''
         volume.identifier = generate_random_uuid()
         self.client.create_namespaced_persistent_volume_claim(
-            self.pool.get("namespace", "default"), self.yaml_file({
+            self.pool.get("namespace", "default"),
+            self.yaml_file({
                 'STORAGE_NAME': volume.identifier,
                 'STORAGE_SIZE': volume.size_gb,
                 'STORAGE_TYPE': self.pool.get('storage_type', '')

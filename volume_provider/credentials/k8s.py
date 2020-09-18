@@ -15,7 +15,7 @@ class CredentialK8s(CredentialBase):
     def kube_config_content(self):
         return self.content['kube_config_content']
 
-    def pool_add(self, name, token, host):
+    def pool_add(self, name, token, endpoint, namespace=None, storage_type=None):
         credential = self.content
         if "pools" not in credential:
             credential["pools"] = {}
@@ -23,8 +23,12 @@ class CredentialK8s(CredentialBase):
             return False, "The {} are already registered".format(name)
         credential["pools"][name] = {
             "token": token,
-            "host": host
+            "endpoint": endpoint,
         }
+        if namespace:
+            credential["pools"][name]["namespace"] = namespace
+        if storage_type:
+            credential["pools"][name]["storage_type"] = storage_type
         self._content = credential
         self.save()
         return True, ""
