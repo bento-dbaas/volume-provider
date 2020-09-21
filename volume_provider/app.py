@@ -153,13 +153,16 @@ def create_volume(provider_name, env):
     data = request.get_json()
     group = data.get("group", None)
     size_kb = data.get("size_kb", None)
+    pool_name = data.get("pool", None)
+    if pool_name:
+        del data["pool"]
 
     if not(group and size_kb):
         return response_invalid_request("Invalid data {}".format(data))
 
     try:
         provider_cls = get_provider_to(provider_name)
-        provider = provider_cls(env)
+        provider = provider_cls(env, pool_name)
         volume = provider.create_volume(**data)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log

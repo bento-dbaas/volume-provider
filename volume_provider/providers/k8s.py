@@ -31,8 +31,9 @@ class ProviderK8s(ProviderBase):
 
     def build_client(self):
         configuration = Configuration()
-        configuration.api_key['authorization'] = self.pool['token']
+        configuration.api_key['authorization'] = "Bearer {}".format(self.pool['token'])
         configuration.host = self.pool['endpoint']
+        configuration.verify_ssl = self.pool.get("verify_ssl", False)
         api_client = ApiClient(configuration)
         return CoreV1Api(api_client)
 
@@ -48,6 +49,8 @@ class ProviderK8s(ProviderBase):
     def _create_volume(self, volume, snapshot=None):
         volume.owner_address = ''
         volume.identifier = generate_random_uuid()
+        volume.resource_id = volume.identifier
+        volume.path = "/"
         self.client.create_namespaced_persistent_volume_claim(
             self.pool.get("namespace", "default"),
             self.yaml_file({
@@ -56,8 +59,6 @@ class ProviderK8s(ProviderBase):
                 'STORAGE_TYPE': self.pool.get('storage_type', '')
             })
         )
-        volume.save()
-
         return volume
 
     def _delete_volume(self, volume, **kw):
@@ -86,6 +87,9 @@ class ProviderK8s(ProviderBase):
         export = self.client.export_get(volume)
         volume.resource_id = export['resource_id']
         volume.path = job_result['full_path']
+
+    def _add_access(self, volume, to_address):
+        pass
 
 
 class CommandsK8s(CommandsBase):

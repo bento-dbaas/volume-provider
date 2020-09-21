@@ -14,4 +14,4 @@ def is_uuid4(value):
 
 
 def generate_random_uuid():
-    return uuid4()
+    return str(uuid4())
