@@ -85,7 +85,7 @@ class ProviderBase(object):
         raise NotImplementedError
 
     def load_volume(self, identifier, search_field="identifier"):
-        volume = Volume.objects(search_field=identifier).get()
+        volume = Volume.objects(**{search_field: identifier}).get()
         if not self.pool_name:
             self.pool_name = volume.pool
         return volume

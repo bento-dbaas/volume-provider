@@ -11,3 +11,4 @@ spec:
 {% if STORAGE_TYPE %}
   storageClassName: {{ STORAGE_TYPE }}
 {% endif %}
+allowVolumeExpansion: true
