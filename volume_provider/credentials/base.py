@@ -10,6 +10,7 @@ class CredentialMongoDB(object):
         self._db = None
         self._collection_credential = None
         self._content = None
+        self._pools = None
 
     @property
     def db(self):

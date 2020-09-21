@@ -6,11 +6,13 @@ class CredentialK8s(CredentialBase):
 
     @property
     def pools(self):
-        pools = {}
-        for name, value in self.content["pools"].items():
-            pools[name] = value
-            pools[name]["token"] = decrypt(pools[name]["token"])
-        return pools
+        if self._pools is None:
+            self._pools = {}
+            for name, value in self.content["pools"].items():
+                self._pools[name] = value
+                decrypted = decrypt(self._pools[name]["token"])
+                self._pools[name]["token"] = decrypted
+        return self._pools
 
     @property
     def kube_config_path(self):
