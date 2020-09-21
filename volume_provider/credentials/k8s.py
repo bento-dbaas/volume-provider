@@ -1,11 +1,16 @@
 from volume_provider.credentials.base import CredentialBase, CredentialAdd
+from volume_provider.utils.cryptography import encrypt, decrypt
 
 
 class CredentialK8s(CredentialBase):
 
     @property
     def pools(self):
-        return self.content["pools"]
+        pools = {}
+        for name, value in self.content["pools"].items():
+            pools[name] = value
+            pools[name]["token"] = decrypt(pools[name]["token"])
+        return pools
 
     @property
     def kube_config_path(self):
@@ -22,7 +27,7 @@ class CredentialK8s(CredentialBase):
         if name in credential["pools"]:
             return False, "The {} are already registered".format(name)
         credential["pools"][name] = {
-            "token": token,
+            "token":  encrypt(token),
             "endpoint": endpoint,
         }
         if namespace:
