@@ -31,11 +31,16 @@ class ProviderK8s(ProviderBase):
 
     def build_client(self):
         configuration = Configuration()
-        configuration.api_key['authorization'] = "Bearer {}".format(self.auth_info['k8s-token'])
-        configuration.host = self.auth_info['k8s-endpoint']
-        configuration.verify_ssl = self.auth_info.get("k8s-verify_ssl", False)
+        configuration.api_key['authorization'] = "Bearer {}".format(self.auth_info['K8S-Token'])
+        configuration.host = self.auth_info['K8S-Endpoint']
+        configuration.verify_ssl = self._verify_ssl
         api_client = ApiClient(configuration)
         return CoreV1Api(api_client)
+
+    @property
+    def _verify_ssl(self):
+        verify_ssl = self.auth_info.get("K8S-Verify-Ssl", 'false')
+        return verify_ssl != 'false' and verify_ssl != 0
 
     def build_credential(self):
         return CredentialK8s(self.provider, self.environment)
@@ -52,11 +57,11 @@ class ProviderK8s(ProviderBase):
         volume.resource_id = volume.identifier
         volume.path = "/"
         self.client.create_namespaced_persistent_volume_claim(
-            self.auth_info.get("k8s-namespace", "default"),
+            self.auth_info.get("K8S-Namespace", "default"),
             self.yaml_file({
                 'STORAGE_NAME': volume.identifier,
                 'STORAGE_SIZE': volume.size_gb,
-                'STORAGE_TYPE': self.auth_info.get('k8s-storage_type', '')
+                'STORAGE_TYPE': self.auth_info.get('K8S-Storage-Type', '')
             })
         )
         return volume

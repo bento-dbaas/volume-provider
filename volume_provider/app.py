@@ -36,9 +36,6 @@ def build_provider(provider_name, env):
 @auth.login_required
 def create_credential(provider_name, env):
     data = request.get_json()
-    if not data:
-        return response_invalid_request("No data".format(data))
-
     try:
         provider = build_provider(provider_name, env)
         success, message = provider.credential_add(data)
