@@ -10,7 +10,6 @@ class CredentialMongoDB(object):
         self._db = None
         self._collection_credential = None
         self._content = None
-        self._pools = None
 
     @property
     def db(self):
@@ -76,12 +75,6 @@ class CredentialBase(CredentialMongoDB):
         if not self._content:
             self._content = self.get_content()
         return super(CredentialBase, self).content
-
-    def pool_add(self, *args, **kwargs):
-        raise NotImplementedError
-
-    def pool_remove(self, *args, **kwargs):
-        raise NotImplementedError
 
 
 class CredentialAdd(CredentialMongoDB):

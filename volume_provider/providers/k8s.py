@@ -31,9 +31,9 @@ class ProviderK8s(ProviderBase):
 
     def build_client(self):
         configuration = Configuration()
-        configuration.api_key['authorization'] = "Bearer {}".format(self.pool['token'])
-        configuration.host = self.pool['endpoint']
-        configuration.verify_ssl = self.pool.get("verify_ssl", False)
+        configuration.api_key['authorization'] = "Bearer {}".format(self.auth_info['token'])
+        configuration.host = self.auth_info['endpoint']
+        configuration.verify_ssl = self.auth_info.get("verify_ssl", False)
         api_client = ApiClient(configuration)
         return CoreV1Api(api_client)
 
@@ -52,11 +52,11 @@ class ProviderK8s(ProviderBase):
         volume.resource_id = volume.identifier
         volume.path = "/"
         self.client.create_namespaced_persistent_volume_claim(
-            self.pool.get("namespace", "default"),
+            self.auth_info.get("namespace", "default"),
             self.yaml_file({
                 'STORAGE_NAME': volume.identifier,
                 'STORAGE_SIZE': volume.size_gb,
-                'STORAGE_TYPE': self.pool.get('storage_type', '')
+                'STORAGE_TYPE': self.auth_info.get('storage_type', '')
             })
         )
         return volume

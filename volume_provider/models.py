@@ -10,7 +10,6 @@ class Volume(Document):
     path = StringField(max_length=1000, required=True)
     owner_address = StringField(max_length=20, required=True)
     volume_name = StringField(max_length=255, required=False)
-    pool = StringField(max_length=255, required=False)
 
     def set_group(self, group):
         self.group = group
@@ -31,7 +30,6 @@ class Volume(Document):
             'identifier': self.identifier,
             'path': self.path,
             'volume_name': self.volume_name,
-            'pool': self.pool,
             'owner_address': self.owner_address,
         }
 

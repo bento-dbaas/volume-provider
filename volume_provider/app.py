@@ -108,61 +108,19 @@ def destroy_credential(provider_name, env):
     return response_not_found("{}-{}".format(provider_name, env))
 
 
-@app.route(
-    "/<string:provider_name>/<string:env>/pool", methods=['POST']
-)
-@auth.login_required
-def add_pool(provider_name, env):
-    data = request.get_json()
-    if not data:
-        return response_invalid_request("No data".format(data))
-
-    try:
-        provider_cls = get_provider_to(provider_name)
-        provider = provider_cls(env)
-        success, message = provider.credential.pool_add(**data)
-    except Exception as e:
-        print_exc()
-        return response_invalid_request(str(e))
-
-    if not success:
-        return response_invalid_request(message)
-    return response_created(success=success, id=str(message))
-
-
-@app.route(
-    "/<string:provider_name>/<string:env>/<string:pool>", methods=['DELETE']
-)
-@auth.login_required
-def remove_pool(provider_name, env, pool):
-    try:
-        provider_cls = get_provider_to(provider_name)
-        provider = provider_cls(env)
-        success, message = provider.credential.pool_remove(pool)
-    except Exception as e:
-        print_exc()
-        return response_invalid_request(str(e))
-    if not success:
-        return response_invalid_request(message)
-    return response_ok()
-
-
 @app.route("/<string:provider_name>/<string:env>/volume/new", methods=['POST'])
 @auth.login_required
 def create_volume(provider_name, env):
     data = request.get_json()
     group = data.get("group", None)
     size_kb = data.get("size_kb", None)
-    pool_name = data.get("pool", None)
-    if pool_name:
-        del data["pool"]
 
     if not(group and size_kb):
         return response_invalid_request("Invalid data {}".format(data))
 
     try:
         provider_cls = get_provider_to(provider_name)
-        provider = provider_cls(env, pool_name)
+        provider = provider_cls(env, request.headers)
         volume = provider.create_volume(**data)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
