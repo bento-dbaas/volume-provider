@@ -31,9 +31,9 @@ class ProviderK8s(ProviderBase):
 
     def build_client(self):
         configuration = Configuration()
-        configuration.api_key['authorization'] = "Bearer {}".format(self.auth_info['token'])
-        configuration.host = self.auth_info['endpoint']
-        configuration.verify_ssl = self.auth_info.get("verify_ssl", False)
+        configuration.api_key['authorization'] = "Bearer {}".format(self.auth_info['k8s-token'])
+        configuration.host = self.auth_info['k8s-endpoint']
+        configuration.verify_ssl = self.auth_info.get("k8s-verify_ssl", False)
         api_client = ApiClient(configuration)
         return CoreV1Api(api_client)
 
@@ -52,11 +52,11 @@ class ProviderK8s(ProviderBase):
         volume.resource_id = volume.identifier
         volume.path = "/"
         self.client.create_namespaced_persistent_volume_claim(
-            self.auth_info.get("namespace", "default"),
+            self.auth_info.get("k8s-namespace", "default"),
             self.yaml_file({
                 'STORAGE_NAME': volume.identifier,
                 'STORAGE_SIZE': volume.size_gb,
-                'STORAGE_TYPE': self.auth_info.get('storage_type', '')
+                'STORAGE_TYPE': self.auth_info.get('k8s-storage_type', '')
             })
         )
         return volume
@@ -64,7 +64,6 @@ class ProviderK8s(ProviderBase):
     def _delete_volume(self, volume, **kw):
         self.client.delete_namespaced_persistent_volume_claim(
             volume.identifier,
-            kw.get('namespace', 'default')
         )
 
     def _resize(self, volume, new_size_kb):
