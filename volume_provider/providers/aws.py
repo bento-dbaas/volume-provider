@@ -1,7 +1,6 @@
 from os import getenv
 from collections import namedtuple
 from time import sleep
-from traceback import print_exc
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
 from volume_provider.settings import AWS_PROXY, TAG_BACKUP_DBAAS

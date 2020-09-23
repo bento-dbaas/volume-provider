@@ -1,7 +1,15 @@
 from volume_provider.models import Volume, Snapshot
 
 
-class ProviderBase(object):
+class BasicProvider(object):
+
+    @staticmethod
+    def load_volume(identifier, search_field="identifier"):
+        volume = Volume.objects(**{search_field: identifier}).get()
+        return volume
+
+
+class ProviderBase(BasicProvider):
 
     def __init__(self, environment, auth_info=None):
         self.environment = environment
@@ -78,10 +86,6 @@ class ProviderBase(object):
 
     def _create_volume(self, volume, snapshot=None):
         raise NotImplementedError
-
-    def load_volume(self, identifier, search_field="identifier"):
-        volume = Volume.objects(**{search_field: identifier}).get()
-        return volume
 
     def delete_volume(self, identifier):
         volume = self.load_volume(identifier)
@@ -162,7 +166,7 @@ class ProviderBase(object):
         raise NotImplementedError
 
 
-class CommandsBase(object):
+class CommandsBase(BasicProvider):
 
     def __init__(self, data_directory="/data"):
         self.data_directory = data_directory

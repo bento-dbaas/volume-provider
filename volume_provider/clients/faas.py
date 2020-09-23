@@ -50,7 +50,7 @@ class FaaSClient(object):
                 return access
 
     def create_access(self, export, address, access_type=None):
-        error("Check acess for {}:{}".format(export.identifier, address))
+        error("Check access for {}:{}".format(export.identifier, address))
         access = self.check_access_exist(export, address)
         error("access {}".format(access))
         if access:
