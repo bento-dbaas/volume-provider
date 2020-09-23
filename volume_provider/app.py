@@ -25,18 +25,19 @@ def verify_password(username, password):
     return True
 
 
+def build_provider(provider_name, env):
+    provider_cls = get_provider_to(provider_name)
+    return provider_cls(env, dict(request.headers))
+
+
 @app.route(
     "/<string:provider_name>/<string:env>/credential/new", methods=['POST']
 )
 @auth.login_required
 def create_credential(provider_name, env):
     data = request.get_json()
-    if not data:
-        return response_invalid_request("No data".format(data))
-
     try:
-        provider_cls = get_provider_to(provider_name)
-        provider = provider_cls(env)
+        provider = build_provider(provider_name, env)
         success, message = provider.credential_add(data)
     except Exception as e:
         print_exc()  # TODO Improve log
@@ -53,8 +54,7 @@ def create_credential(provider_name, env):
 @auth.login_required
 def get_all_credential(provider_name):
     try:
-        provider_cls = get_provider_to(provider_name)
-        provider = provider_cls(None)
+        provider = build_provider(provider_name, None)
         return make_response(
             json.dumps(
                 list(map(lambda x: x, provider.credential.all())),
@@ -72,8 +72,7 @@ def get_all_credential(provider_name):
 @auth.login_required
 def get_credential(provider_name, env):
     try:
-        provider_cls = get_provider_to(provider_name)
-        provider = provider_cls(env)
+        provider = build_provider(provider_name, env)
         credential = provider.credential.get_by(environment=env)
     except Exception as e:
         print_exc()  # TODO Improve log
@@ -96,8 +95,7 @@ def update_credential(provider_name, env):
 @auth.login_required
 def destroy_credential(provider_name, env):
     try:
-        provider_cls = get_provider_to(provider_name)
-        provider = provider_cls(env)
+        provider = build_provider(provider_name, env)
         deleted = provider.credential.delete()
     except Exception as e:
         print_exc()  # TODO Improve log
@@ -114,16 +112,13 @@ def create_volume(provider_name, env):
     data = request.get_json()
     group = data.get("group", None)
     size_kb = data.get("size_kb", None)
-    to_address = data.get("to_address", None)
-    snapshot_id = data.get("snapshot_id", None)
 
-    if not(group and size_kb and to_address):
+    if not(group and size_kb):
         return response_invalid_request("Invalid data {}".format(data))
 
     try:
-        provider_cls = get_provider_to(provider_name)
-        provider = provider_cls(env)
-        volume = provider.create_volume(group, size_kb, to_address, snapshot_id=snapshot_id)
+        provider = build_provider(provider_name, env)
+        volume = provider.create_volume(**data)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
@@ -137,8 +132,7 @@ def create_volume(provider_name, env):
 @auth.login_required
 def delete_volume(provider_name, env, identifier):
     try:
-        provider_cls = get_provider_to(provider_name)
-        provider = provider_cls(env)
+        provider = build_provider(provider_name, env)
         provider.delete_volume(identifier)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
@@ -153,8 +147,7 @@ def delete_volume(provider_name, env, identifier):
 @auth.login_required
 def get_volume(provider_name, env, identifier_or_path):
     try:
-        provider_cls = get_provider_to(provider_name)
-        provider = provider_cls(env)
+        provider = build_provider(provider_name, env)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
@@ -179,8 +172,7 @@ def add_volume_access(provider_name, env, identifier):
         return response_invalid_request("Invalid data {}".format(data))
 
     try:
-        provider_cls = get_provider_to(provider_name)
-        provider = provider_cls(env)
+        provider = build_provider(provider_name, env)
         provider.add_access(identifier, to_address, access_type)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
@@ -195,8 +187,7 @@ def add_volume_access(provider_name, env, identifier):
 @auth.login_required
 def remove_volume_access(name, env, identifier, address):
     try:
-        provider_cls = get_provider_to(name)
-        provider = provider_cls(env)
+        provider = build_provider(name, env)
         provider.remove_access(identifier, address)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
@@ -217,8 +208,7 @@ def resize_volume(provider_name, env, identifier):
         return response_invalid_request("Invalid data {}".format(data))
 
     try:
-        provider_cls = get_provider_to(provider_name)
-        provider = provider_cls(env)
+        provider = build_provider(provider_name, env)
         provider.resize(identifier, new_size_kb)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
@@ -237,8 +227,7 @@ def take_snapshot(provider_name, env, identifier):
     team_name = data.get("team_name", None)
     db_name = data.get("db_name", None)
     try:
-        provider_cls = get_provider_to(provider_name)
-        provider = provider_cls(env)
+        provider = build_provider(provider_name, env)
         snapshot = provider.take_snapshot(
             identifier, team_name, engine, db_name
         )
@@ -259,8 +248,7 @@ def take_snapshot(provider_name, env, identifier):
 @auth.login_required
 def get_snapshot_status(provider_name, env, identifier):
     try:
-        provider_cls = get_provider_to(provider_name)
-        provider = provider_cls(env)
+        provider = build_provider(provider_name, env)
         state = provider.get_snapshot_status(identifier)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
@@ -278,8 +266,7 @@ def get_snapshot_status(provider_name, env, identifier):
 def remove_snapshot(provider_name, env, identifier):
     force = bool(int(request.args.get('force', '0')))
     try:
-        provider_cls = get_provider_to(provider_name)
-        provider = provider_cls(env)
+        provider = build_provider(provider_name, env)
         removed = provider.remove_snapshot(identifier, force)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
@@ -294,8 +281,7 @@ def remove_snapshot(provider_name, env, identifier):
 @auth.login_required
 def restore_snapshot(provider_name, env, identifier):
     try:
-        provider_cls = get_provider_to(provider_name)
-        provider = provider_cls(env)
+        provider = build_provider(provider_name, env)
         volume = provider.restore_snapshot(identifier)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
@@ -313,8 +299,7 @@ def command_mount(provider_name, env, identifier):
     with_fstab = data.get("with_fstab", True)
     data_directory = data.get("data_directory", "/data")
     try:
-        provider_cls = get_provider_to(provider_name)
-        provider = provider_cls(env)
+        provider = build_provider(provider_name, env)
         provider.commands.data_directory = data_directory
         command = provider.commands.mount(identifier, fstab=with_fstab)
     except Exception as e:  # TODO What can get wrong here?
@@ -337,8 +322,7 @@ def command_scp_from_snap(provider_name, env, identifier):
     if not(target_ip and target_dir and source_dir):
         return response_invalid_request("Invalid data {}".format(data))
     try:
-        provider_cls = get_provider_to(provider_name)
-        provider = provider_cls(env)
+        provider = build_provider(provider_name, env)
         command = provider.commands.scp(
             identifier,
             source_dir,
@@ -397,8 +381,7 @@ def command_remove_hosts_allow(provider_name, env):
 def command_copy_files(provider_name, env):
     data = request.get_json()
     try:
-        provider_cls = get_provider_to(provider_name)
-        provider = provider_cls(env)
+        provider = build_provider(provider_name, env)
         command = provider.commands.copy_files(**data)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
@@ -415,8 +398,7 @@ def command_umount(provider_name, env, identifier):
     data = request.get_json()
     data_directory = data.get("data_directory", "/data")
     try:
-        provider_cls = get_provider_to(provider_name)
-        provider = provider_cls(env)
+        provider = build_provider(provider_name, env)
         command = provider.commands.umount(
             identifier,
             data_directory=data_directory
@@ -434,8 +416,7 @@ def command_umount(provider_name, env, identifier):
 @auth.login_required
 def cleanup(provider_name, env, identifier):
     try:
-        provider_cls = get_provider_to(provider_name)
-        provider = provider_cls(env)
+        provider = build_provider(provider_name, env)
         command = provider.commands.clean_up(identifier)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
@@ -454,8 +435,7 @@ def _command(provider_name, env, func_name, keys_must_on_payload):
     if not(is_valid):
         return response_invalid_request("Invalid data {}".format(data))
     try:
-        provider_cls = get_provider_to(provider_name)
-        provider = provider_cls(env)
+        provider = build_provider(provider_name, env)
         func = getattr(provider.commands, func_name)
         command = func(**data)
     except Exception as e:  # TODO What can get wrong here?
@@ -471,14 +451,14 @@ def _command_hosts_allow(provider_name, env, func_name):
     if not(host_ip):
         return response_invalid_request("Invalid data {}".format(data))
     try:
-        provider_cls = get_provider_to(provider_name)
-        provider = provider_cls(env)
+        provider = build_provider(provider_name, env)
         func = getattr(provider.commands, func_name)
         command = func(host_ip)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
     return response_ok(command=command)
+
 
 def response_invalid_request(error, status_code=500):
     return _response(status_code, error=error)

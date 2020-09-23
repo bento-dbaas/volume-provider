@@ -1,4 +1,5 @@
-from mongoengine import Document, StringField, IntField, ReferenceField, CASCADE
+from mongoengine import (Document, StringField, IntField, ReferenceField,
+                         CASCADE)
 
 
 class Volume(Document):
@@ -8,6 +9,7 @@ class Volume(Document):
     identifier = StringField(required=True)
     path = StringField(max_length=1000, required=True)
     owner_address = StringField(max_length=20, required=True)
+    volume_name = StringField(max_length=255, required=False)
 
     def set_group(self, group):
         self.group = group
@@ -27,6 +29,7 @@ class Volume(Document):
             'resource_id': self.resource_id,
             'identifier': self.identifier,
             'path': self.path,
+            'volume_name': self.volume_name,
             'owner_address': self.owner_address,
         }
 
@@ -35,7 +38,7 @@ class Volume(Document):
         return Volume.objects(group=self.group).all()
 
     def convert_kb_to_gb(self, size_kb):
-        return int((int(size_kb)/1024)/1024)
+        return round((float(size_kb)/1024.0)/1024.0)
 
     @property
     def size_gb(self):

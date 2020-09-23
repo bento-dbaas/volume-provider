@@ -3,11 +3,12 @@ from volume_provider.models import Volume, Snapshot
 
 class ProviderBase(object):
 
-    def __init__(self, environment):
+    def __init__(self, environment, auth_info=None):
         self.environment = environment
         self._client = None
         self._credential = None
         self._commands = None
+        self.auth_info = auth_info
 
     @property
     def client(self):
@@ -75,11 +76,15 @@ class ProviderBase(object):
 
         return volume
 
-    def _create_volume(self, volume):
+    def _create_volume(self, volume, snapshot=None):
         raise NotImplementedError
 
+    def load_volume(self, identifier, search_field="identifier"):
+        volume = Volume.objects(**{search_field: identifier}).get()
+        return volume
+
     def delete_volume(self, identifier):
-        volume = Volume.objects(identifier=identifier).get()
+        volume = self.load_volume(identifier)
         self._delete_volume(volume)
         volume.delete()
 
@@ -88,30 +93,30 @@ class ProviderBase(object):
 
     def get_volume(self, identifier_or_path):
         try:
-            return Volume.objects(identifier=identifier_or_path).get()
+            return self.load_volume(identifier_or_path)
         except Volume.DoesNotExist:
             pass
         try:
-            return Volume.objects(path__icontains=identifier_or_path).get()
+            return self.load_volume(identifier_or_path, search_field="path__icontains")
         except Volume.DoesNotExist:
             return None
 
     def add_access(self, identifier, to_address, access_type=None):
-        volume = Volume.objects(identifier=identifier).get()
+        volume = self.load_volume(identifier)
         self._add_access(volume, to_address, access_type)
 
     def _add_access(self, volume, to_address):
         raise NotImplementedError
 
     def remove_access(self, identifier, to_address):
-        volume = Volume.objects(identifier=identifier).get()
+        volume = self.load_volume(identifier)
         self._remove_access(volume, to_address)
 
     def _remove_access(self, volume, to_address):
         raise NotImplementedError
 
     def resize(self, identifier, new_size_kb):
-        volume = Volume.objects(identifier=identifier).get()
+        volume = self.load_volume(identifier)
         self._resize(volume, new_size_kb)
         volume.size_kb = new_size_kb
         volume.save()
@@ -124,7 +129,7 @@ class ProviderBase(object):
         return self._get_snapshot_status(snap)
 
     def take_snapshot(self, identifier, team, engine, db_name):
-        volume = Volume.objects(identifier=identifier).get()
+        volume = self.load_volume(identifier)
         snapshot = Snapshot(volume=volume)
         self._take_snapshot(volume, snapshot, team, engine, db_name)
         snapshot.save()
@@ -173,11 +178,12 @@ die_if_error()
     fi
 }
 """
+
     def copy_files(self, *args, **kw):
         return self._copy_files(*args, **kw)
 
     def mount(self, identifier, fstab=True):
-        volume = Volume.objects(identifier=identifier).get()
+        volume = self.load_volume(identifier)
         return self._mount(volume, fstab=fstab)
 
     def scp(self, identifier, source_dir, target_ip, target_dir):
@@ -248,14 +254,14 @@ die_if_error "Error to remove public key dbaas"
         raise NotImplementedError
 
     def umount(self, identifier, data_directory):
-        volume = Volume.objects(identifier=identifier).get()
+        volume = self.load_volume(identifier)
         return self._umount(volume, data_directory=data_directory)
 
     def _umount(self, volume):
         raise NotImplementedError
 
     def clean_up(self, identifier):
-        volume = Volume.objects(identifier=identifier).get()
+        volume = self.load_volume(identifier)
         return self._clean_up(volume)
 
     def _clean_up(self, volume):

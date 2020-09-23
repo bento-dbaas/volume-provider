@@ -1,4 +1,4 @@
-from uuid import UUID
+from uuid import UUID, uuid4
 
 
 def is_uuid(value, version):
@@ -11,3 +11,7 @@ def is_uuid(value, version):
 
 def is_uuid4(value):
     return is_uuid(value, 4)
+
+
+def generate_random_uuid():
+    return str(uuid4())

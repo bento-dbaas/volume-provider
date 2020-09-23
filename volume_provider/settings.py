@@ -26,6 +26,3 @@ AWS_PROXY = getenv("AWS_PROXY", None)
 TEAM_API_URL = getenv("TEAM_API_URL", None)
 
 TAG_BACKUP_DBAAS = getenv("TAG_BACKUP_DBAAS", None)
-
-
-
