@@ -69,6 +69,7 @@ class ProviderK8s(ProviderBase):
     def _delete_volume(self, volume, **kw):
         self.client.delete_namespaced_persistent_volume_claim(
             volume.identifier,
+            self.auth_info.get("K8S-Namespace", "default"),
         )
 
     def _resize(self, volume, new_size_kb):
