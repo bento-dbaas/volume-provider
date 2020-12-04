@@ -103,3 +103,6 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# local dev files
+.export-volume-provider-local-dev.sh
