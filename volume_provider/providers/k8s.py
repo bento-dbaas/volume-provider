@@ -73,7 +73,7 @@ class ProviderK8s(ProviderBase):
         )
 
     def _resize(self, volume, new_size_kb):
-        new_size_gb = new_size_kb/1024/1024
+        new_size_gb = volume.convert_kb_to_gb(new_size_kb)
         self.client.patch_namespaced_persistent_volume_claim(
             name=volume.identifier,
             namespace=self.auth_info.get("K8S-Namespace", "default"),
