@@ -73,7 +73,16 @@ class ProviderK8s(ProviderBase):
         )
 
     def _resize(self, volume, new_size_kb):
-        self.client.resize(volume, new_size_kb)
+        new_size_gb = new_size_kb/1024/1024
+        self.client.patch_namespaced_persistent_volume_claim(
+            name=volume.identifier,
+            namespace=self.auth_info.get("K8S-Namespace", "default"),
+            body=self.yaml_file({
+                'STORAGE_NAME': volume.identifier,
+                'STORAGE_SIZE': new_size_gb,
+                'STORAGE_TYPE': self.auth_info.get('K8S-Storage-Type', '')
+            })
+        )
 
     def _take_snapshot(self, volume, snapshot, *args):
         new_snapshot = self.client.create_snapshot(volume)
