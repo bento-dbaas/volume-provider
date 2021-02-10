@@ -51,19 +51,22 @@ class ProviderGce(ProviderBase):
         name = all_disks[ len(all_disks) - 1 ].get('name')
         return "%s-data%s" % (name, len(all_disks))
     
-    def _create_volume(self, volume, snapshot=None, zone=None, size_kb=None, *args, **kwargs):
+    def _create_volume(self, volume, snapshot=None, *args, **kwargs):
         disk_name = self.__get_new_disk_name(
                          project=self.credential.project, 
-                         zone=zone)
+                         zone=volume.zone)
         
         config = {
             'name': disk_name,
-            'sizeGb': int(size_kb / 1000)
+            'sizeGb': int(volume.size_kb / 1000),
+            'labels': {
+                'group': volume.group
+            }
         }
 
         disk_create = self.client.disks().insert(
             project=self.credential.project,
-            zone=zone,
+            zone=volume.zone,
             body=config
         ).execute()
         

@@ -79,8 +79,7 @@ class ProviderBase(BasicProvider):
         volume.set_group(group)
         volume.zone = zone
         volume.owner_address = to_address
-        self._create_volume(volume, snapshot=snapshot, 
-                            zone=zone, size_kb=size_kb)
+        self._create_volume(volume, snapshot=snapshot)
         self._add_access(volume, volume.owner_address)
         volume.save()
 
