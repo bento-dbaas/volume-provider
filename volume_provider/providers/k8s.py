@@ -51,7 +51,7 @@ class ProviderK8s(ProviderBase):
     def _get_snapshot_status(self, snapshot):
         return 'available'
 
-    def _create_volume(self, volume, snapshot=None):
+    def _create_volume(self, volume, snapshot=None, *args, **kwargs):
         volume.owner_address = ''
         volume.identifier = generate_random_uuid()
         volume.resource_id = volume.identifier

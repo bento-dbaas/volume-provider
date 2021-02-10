@@ -70,21 +70,23 @@ class ProviderBase(BasicProvider):
     def get_credential_add(self):
         raise NotImplementedError
 
-    def create_volume(self, group, size_kb, to_address, snapshot_id=None):
+    def create_volume(self, group, size_kb, to_address, snapshot_id=None, zone=None):
         snapshot = None
         if snapshot_id:
             snapshot = Snapshot.objects(identifier=snapshot_id).get()
         volume = Volume()
         volume.size_kb = size_kb
         volume.set_group(group)
+        volume.zone = zone
         volume.owner_address = to_address
-        self._create_volume(volume, snapshot=snapshot)
+        self._create_volume(volume, snapshot=snapshot, 
+                            zone=zone, size_kb=size_kb)
         self._add_access(volume, volume.owner_address)
         volume.save()
 
         return volume
 
-    def _create_volume(self, volume, snapshot=None):
+    def _create_volume(self, volume, snapshot=None, *args, **kwargs):
         raise NotImplementedError
 
     def delete_volume(self, identifier):

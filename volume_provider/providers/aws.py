@@ -116,7 +116,7 @@ class ProviderAWS(ProviderBase):
         self.client.detach_volume(ebs, self.credential.force_detach)
         self.__waiting_be_available(volume)
 
-    def _create_volume(self, volume, snapshot=None):
+    def _create_volume(self, volume, snapshot=None, *args, **kwargs):
         node = self.__get_node(volume)
         if snapshot:
             snapshot = self.__get_snapshot(snapshot)

@@ -9,6 +9,7 @@ class Volume(Document):
     identifier = StringField(required=True)
     path = StringField(max_length=1000, required=True)
     owner_address = StringField(max_length=20, required=True)
+    zone = StringField(max_length=200, required=False)
 
     def set_group(self, group):
         self.group = group

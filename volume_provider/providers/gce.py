@@ -39,15 +39,45 @@ class ProviderGce(ProviderBase):
     def get_credential_add(self):
         return CredentialAddGce
 
-    
-
-    def _create_volume(self, volume, snapshot=None, *args, **kwargs):
-        print(dir(self.client))
+    def __get_new_disk_name(self, project, zone):
         all_disks = self.client.disks().list(
             project=self.credential.project,
-            zone=self.credential.zone
+            zone=zone,
         )
-        print(all_disks.execute())
+        # @TODO - improve query params
+        all_disks.uri = "%s&orderBy=creationTimestamp%%20desc" % (all_disks.uri)
+        all_disks = all_disks.execute().get('items')
+
+        name = all_disks[ len(all_disks) - 1 ].get('name')
+        return "%s-data%s" % (name, len(all_disks))
+    
+    # {'engine': u'mongodb_4_2_3', 'group': u'testegclou161282992339', 'name': u'testegclou-01-161282992339', 'database_name': u'teste_gcloud', 'memory': 1024L, 'team_name': u'dbaas', 'cpu': 1.0})
+    def _create_volume(self, volume, snapshot=None, zone=None, size_kb=None, *args, **kwargs):
+        ## get all disks and create a name
+        disk_name = self.__get_new_disk_name(
+                         project=self.credential.project, 
+                         zone=zone)
+        
+        config = {
+            'name': disk_name,
+            'sizeGb': size_kb / 1000
+        }
+
+        disk_create = self.client.disks().insert(
+            project=self.credential.project,
+            zone=zone,
+            body=config
+        ).execute()
+        
+        print(disk_create)
+        #volume.identifier = ebs.id
+        #volume.resource_id = ebs.name
+        #volume.path = self.credential.next_device(volume.owner_address)
+
+        return
+    
+    def _add_access(self, volume, to_address):
+        pass
    
 class CommandsGce(CommandsBase):
 
