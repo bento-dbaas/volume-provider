@@ -110,10 +110,9 @@ def destroy_credential(provider_name, env):
 @auth.login_required
 def create_volume(provider_name, env):
     data = request.get_json()
-    print('post data>>>>',data)
     group = data.get("group", None)
     size_kb = data.get("size_kb", None)
-    
+
 
     if not(group and size_kb):
         return response_invalid_request("Invalid data {}".format(data))

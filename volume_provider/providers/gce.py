@@ -51,16 +51,14 @@ class ProviderGce(ProviderBase):
         name = all_disks[ len(all_disks) - 1 ].get('name')
         return "%s-data%s" % (name, len(all_disks))
     
-    # {'engine': u'mongodb_4_2_3', 'group': u'testegclou161282992339', 'name': u'testegclou-01-161282992339', 'database_name': u'teste_gcloud', 'memory': 1024L, 'team_name': u'dbaas', 'cpu': 1.0})
     def _create_volume(self, volume, snapshot=None, zone=None, size_kb=None, *args, **kwargs):
-        ## get all disks and create a name
         disk_name = self.__get_new_disk_name(
                          project=self.credential.project, 
                          zone=zone)
         
         config = {
             'name': disk_name,
-            'sizeGb': size_kb / 1000
+            'sizeGb': int(size_kb / 1000)
         }
 
         disk_create = self.client.disks().insert(
@@ -69,10 +67,9 @@ class ProviderGce(ProviderBase):
             body=config
         ).execute()
         
-        print(disk_create)
-        #volume.identifier = ebs.id
-        #volume.resource_id = ebs.name
-        #volume.path = self.credential.next_device(volume.owner_address)
+        volume.identifier = disk_create.get('id')
+        volume.resource_id = disk_create.get('name')
+        volume.path = "%s/" % disk_name
 
         return
     
