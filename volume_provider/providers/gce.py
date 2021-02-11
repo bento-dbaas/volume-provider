@@ -74,7 +74,7 @@ class ProviderGce(ProviderBase):
         
         volume.identifier = disk_create.get('id')
         volume.resource_id = disk_name
-        volume.path = "/%s" % disk_name
+        volume.path = "/dev/disk/by-id/google-%s" % disk_name.rsplit("-", 1)[1]
 
         return
     
@@ -86,30 +86,44 @@ class CommandsGce(CommandsBase):
     def __init__(self, provider):
         self.provider = provider
     
-    def _mount(self, volume, *args, **kw):
-        print(volume.vm_name)
-
+    def _mount(self, volume, fstab=True, *args, **kw):
         disk = self.provider.client.disks().get(
             project=self.provider.credential.project,
             zone=volume.zone,
             disk=volume.resource_id
         ).execute()
-
         
         config = {
-            "source": disk.get('selfLink')
+            "source": disk.get('selfLink'),
+            "deviceName": volume.resource_id.rsplit("-", 1)[1]
         }
 
-        instance = self.provider.client\
-                    .instances().attachDisk(
-                        project=self.provider.credential.project,
-                        zone=volume.zone,
-                        instance=volume.vm_name,
-                        body=config
-                    ).execute()
-        
+        self.provider.client\
+            .instances().attachDisk(
+                project=self.provider.credential.project,
+                zone=volume.zone,
+                instance=volume.vm_name,
+                body=config
+            ).execute()
 
-        print(instance, dir(instance))
+        command = "mkfs.ext4 -F %s" % volume.path
+        command += " && mount %(disk_path)s %(data_directory)s" % {
+            "disk_path": volume.path,
+            "data_directory": self.data_directory
+        }
+
+        if fstab:
+            command += " && %s" % self.fstab_script(
+                                    volume.path, 
+                                    self.data_directory)
+
+        return command
+
+    def fstab_script(self, filer_path, mount_path):
+        command = "cp /etc/fstab /etc/fstab.bkp"
+        command += " && sed \'/\{mount_path}/d\' /etc/fstab.bkp > /etc/fstab"
+        command += ' && echo "#Database data disk\n{filer_path}  {mount_path}    ext4 defaults    0   0" >> /etc/fstab'
+        return command.format(mount_path=mount_path, filer_path=filer_path)
 
         
 

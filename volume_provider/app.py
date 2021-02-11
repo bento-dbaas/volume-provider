@@ -300,7 +300,6 @@ def command_mount(provider_name, env, identifier):
     with_fstab = data.get("with_fstab", True)
     data_directory = data.get("data_directory", "/data")
 
-    print('DATAaaa::::::::;', data)
     try:
         provider = build_provider(provider_name, env)
         provider.commands.data_directory = data_directory
