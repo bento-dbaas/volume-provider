@@ -14,6 +14,9 @@ from volume_provider.clients.team import TeamClient
 class ProviderGce(ProviderBase):
 
     
+    def get_commands(self):
+        return CommandsGce(self)
+
     @classmethod
     def get_provider(cls):
         return 'gce'
@@ -39,22 +42,21 @@ class ProviderGce(ProviderBase):
     def get_credential_add(self):
         return CredentialAddGce
 
-    def __get_new_disk_name(self, project, zone):
-        all_disks = self.client.disks().list(
-            project=self.credential.project,
-            zone=zone,
-        )
-        # @TODO - improve query params
-        all_disks.uri = "%s&orderBy=creationTimestamp%%20desc" % (all_disks.uri)
-        all_disks = all_disks.execute().get('items')
+    def __get_new_disk_name(self, volume,project):
 
-        name = all_disks[ len(all_disks) - 1 ].get('name')
-        return "%s-data%s" % (name, len(all_disks))
+        all_disks = self.client.instances().get(
+            project=self.credential.project,
+            zone=volume.zone,
+            instance=volume.vm_name
+        ).execute().get('disks')
+
+        return "%s-data%s" % (volume.vm_name, len(all_disks))
     
     def _create_volume(self, volume, snapshot=None, *args, **kwargs):
         disk_name = self.__get_new_disk_name(
-                         project=self.credential.project, 
-                         zone=volume.zone)
+                         volume,
+                         project=self.credential.project)
+        
         
         config = {
             'name': disk_name,
@@ -71,8 +73,8 @@ class ProviderGce(ProviderBase):
         ).execute()
         
         volume.identifier = disk_create.get('id')
-        volume.resource_id = disk_create.get('name')
-        volume.path = "%s/" % disk_name
+        volume.resource_id = disk_name
+        volume.path = "/%s" % disk_name
 
         return
     
@@ -83,5 +85,32 @@ class CommandsGce(CommandsBase):
 
     def __init__(self, provider):
         self.provider = provider
+    
+    def _mount(self, volume, *args, **kw):
+        print(volume.vm_name)
+
+        disk = self.provider.client.disks().get(
+            project=self.provider.credential.project,
+            zone=volume.zone,
+            disk=volume.resource_id
+        ).execute()
+
+        
+        config = {
+            "source": disk.get('selfLink')
+        }
+
+        instance = self.provider.client\
+                    .instances().attachDisk(
+                        project=self.provider.credential.project,
+                        zone=volume.zone,
+                        instance=volume.vm_name,
+                        body=config
+                    ).execute()
+        
+
+        print(instance, dir(instance))
+
+        
 
     

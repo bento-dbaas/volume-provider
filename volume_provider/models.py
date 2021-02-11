@@ -10,7 +10,7 @@ class Volume(Document):
     path = StringField(max_length=1000, required=True)
     owner_address = StringField(max_length=20, required=True)
     zone = StringField(max_length=200, required=False)
-
+    vm_name = StringField(max_length=200, required=False)
     def set_group(self, group):
         self.group = group
         pair = Volume.objects(group=group).first()
