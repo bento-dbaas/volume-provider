@@ -1,7 +1,10 @@
+import json
+
 from os import getenv
 from collections import namedtuple
 from time import sleep
 
+from googleapiclient.errors import HttpError
 import googleapiclient.discovery
 from google.oauth2 import service_account
 
@@ -80,6 +83,43 @@ class ProviderGce(ProviderBase):
     
     def _add_access(self, volume, to_address):
         pass
+
+    def _delete_volume(self, volume):
+        '''
+            this mehtod detach and delete disks
+            in 'happy flow' it does not necessary
+            because we use "autoDelete" attr on disk attach
+            the code below is usefull in rollback command
+            When we got an error on mount command.
+        '''
+        try:
+            self.client.instances().detachDisk(
+                    project=self.credential.project,
+                    zone=volume.zone,
+                    instance=volume.vm_name,
+                    deviceName=volume.resource_id
+                ).execute()
+        except HttpError:
+            pass
+        
+        
+        try:
+            self.client.disks().delete(
+                project=self.credential.project,
+                zone=volume.zone,
+                disk=volume.resource_id
+            ).execute()
+        except HttpError:
+            pass
+        
+        return
+
+    def get_disk(self, volume):
+        return self.client.disks().get(
+            project=self.credential.project,
+            zone=volume.zone,
+            disk=volume.resource_id
+        ).execute()
    
 class CommandsGce(CommandsBase):
 
@@ -87,15 +127,12 @@ class CommandsGce(CommandsBase):
         self.provider = provider
     
     def _mount(self, volume, fstab=True, *args, **kw):
-        disk = self.provider.client.disks().get(
-            project=self.provider.credential.project,
-            zone=volume.zone,
-            disk=volume.resource_id
-        ).execute()
+        disk = self.provider.get_disk(volume)
         
         config = {
             "source": disk.get('selfLink'),
-            "deviceName": volume.resource_id.rsplit("-", 1)[1]
+            "deviceName": volume.resource_id.rsplit("-", 1)[1],
+            "autoDelete": True
         }
 
         self.provider.client\
@@ -106,7 +143,8 @@ class CommandsGce(CommandsBase):
                 body=config
             ).execute()
 
-        command = "mkfs -t ext4 -F %s" % volume.path
+        command = """while ! [[ -L "%s" ]];do echo "waiting symlink" && sleep 3; done""" % volume.path
+        command += " && mkfs -t ext4 -F %s" % volume.path
         command += " && mount %(disk_path)s %(data_directory)s" % {
             "disk_path": volume.path,
             "data_directory": self.data_directory
