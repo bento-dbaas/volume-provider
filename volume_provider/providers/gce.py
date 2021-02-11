@@ -106,7 +106,7 @@ class CommandsGce(CommandsBase):
                 body=config
             ).execute()
 
-        command = "mkfs.ext4 -F %s" % volume.path
+        command = "mkfs -t ext4 -F %s" % volume.path
         command += " && mount %(disk_path)s %(data_directory)s" % {
             "disk_path": volume.path,
             "data_directory": self.data_directory
