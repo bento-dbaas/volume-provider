@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 
 from os import getenv
 from collections import namedtuple
@@ -118,7 +119,7 @@ class ProviderGce(ProviderBase):
 
         if new_size_kb <= volume.size_kb:
             raise Exception("New size must be greater than current size")
-        
+
         config = {
             "sizeGb": volume.convert_kb_to_gb(new_size_kb, to_int=True)
         }
@@ -130,6 +131,43 @@ class ProviderGce(ProviderBase):
         ).execute()
 
         return
+    def __verify_none(self, dict_var, key, var):
+        if var:
+            dict_var[key] = var
+
+    def __get_snapshot_name(self, volume):
+        return "s-%(volume_name)s-%(timestamp)s" % {
+            'volume_name': volume.resource_id.replace('-',''),
+            'timestamp': datetime.now().strftime('%Y%m%d%H%M%S%f')
+        }
+
+    def _take_snapshot(self, volume, snapshot, team, engine, db_name):
+        snapshot_name = self.__get_snapshot_name(volume)
+
+        ex_metadata = {}
+        if team and engine:
+            ex_metadata = TeamClient.make_tags(team, engine)
+        self.__verify_none(ex_metadata, 'engine', engine)
+        self.__verify_none(ex_metadata, 'db_name', db_name)
+        self.__verify_none(ex_metadata, 'team', team)
+        self.__verify_none(ex_metadata, TAG_BACKUP_DBAAS.lower(), 1)
+        
+        config = {
+            'labels': ex_metadata,
+            'name': snapshot_name
+        }
+
+
+        new_snapshot = self.client.disks().createSnapshot(
+            project=self.credential.project,
+            zone=volume.zone,
+            disk=volume.resource_id,
+            body=config
+        ).execute()
+
+
+        snapshot.identifier = new_snapshot.get('id')
+        snapshot.description = snapshot_name
 
     def get_disk(self, volume):
         return self.client.disks().get(
