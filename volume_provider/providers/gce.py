@@ -6,6 +6,7 @@ from collections import namedtuple
 from time import sleep
 
 from googleapiclient.errors import HttpError
+
 import googleapiclient.discovery
 from google.oauth2 import service_account
 
@@ -157,7 +158,6 @@ class ProviderGce(ProviderBase):
             'name': snapshot_name
         }
 
-
         new_snapshot = self.client.disks().createSnapshot(
             project=self.credential.project,
             zone=volume.zone,
@@ -165,9 +165,19 @@ class ProviderGce(ProviderBase):
             body=config
         ).execute()
 
-
         snapshot.identifier = new_snapshot.get('id')
         snapshot.description = snapshot_name
+        return
+    
+    def _get_snapshot_status(self, snapshot):
+        ss = self.client.snapshots().get(
+            project=self.credential.project,
+            snapshot=snapshot.description
+        ).execute()
+            
+
+        return ss.get('status')
+    
 
     def get_disk(self, volume):
         return self.client.disks().get(
