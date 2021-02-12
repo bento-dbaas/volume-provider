@@ -63,7 +63,7 @@ class ProviderGce(ProviderBase):
         
         config = {
             'name': disk_name,
-            'sizeGb': int(volume.size_kb / 1000),
+            'sizeGb': volume.convert_kb_to_gb(volume.size_kb, to_int=True),
             'labels': {
                 'group': volume.group
             }
@@ -114,12 +114,30 @@ class ProviderGce(ProviderBase):
         
         return
 
+    def _resize(self, volume, new_size_kb):
+
+        if new_size_kb <= volume.size_kb:
+            raise Exception("New size must be greater than current size")
+        
+        config = {
+            "sizeGb": volume.convert_kb_to_gb(new_size_kb, to_int=True)
+        }
+        self.client.disks().resize(
+            project=self.credential.project,
+            zone=volume.zone,
+            disk=volume.resource_id,
+            body=config
+        ).execute()
+
+        return
+
     def get_disk(self, volume):
         return self.client.disks().get(
             project=self.credential.project,
             zone=volume.zone,
             disk=volume.resource_id
         ).execute()
+    
    
 class CommandsGce(CommandsBase):
 

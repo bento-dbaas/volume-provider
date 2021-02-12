@@ -36,8 +36,9 @@ class Volume(Document):
     def pairs(self):
         return Volume.objects(group=self.group).all()
 
-    def convert_kb_to_gb(self, size_kb):
-        return round((float(size_kb)/1024.0)/1024.0)
+    def convert_kb_to_gb(self, size_kb, to_int=False):
+        gb_size = round((float(size_kb)/1024.0)/1024.0)
+        return int(gb_size) if to_int else gb_size
 
     @property
     def size_gb(self):
