@@ -175,8 +175,15 @@ class ProviderGce(ProviderBase):
             snapshot=snapshot.description
         ).execute()
             
-
         return ss.get('status')
+    
+    def _remove_snapshot(self, snapshot, *args, **kwrgs):
+        self.client.snapshots().delete(
+            project=self.credential.project,
+            snapshot=snapshot.description
+        ).execute()
+    
+        return True
     
 
     def get_disk(self, volume):
