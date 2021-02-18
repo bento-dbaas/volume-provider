@@ -4,16 +4,16 @@
 Native:
  - Copy the base env file to dev env file:
 ```shell
-	$cp.export-volume-provider-local-base.sh .export-volume-provider-local-dev.sh
+$cp .export-volume-provider-local-base.sh .export-volume-provider-local-dev.sh
 ```
  - Replace variables in `.export-volume-provider-local-dev.sh` file.
  - install requirements:
   ```shell
-     $pip install -r requirements.txt
+$pip install -r requirements.txt
  ```
  - load environment variables: 
   ```shell
-    $source .export-volume-provider-local-dev.sh
+$source .export-volume-provider-local-dev.sh
   ```
    
  - run project: `$make run`
