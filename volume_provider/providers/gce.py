@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+from time import sleep
 
 from os import getenv
 from collections import namedtuple
@@ -47,7 +48,7 @@ class ProviderGce(ProviderBase):
     def get_credential_add(self):
         return CredentialAddGce
 
-    def __get_new_disk_name(self, volume,project):
+    def __get_new_disk_name(self, volume):
 
         all_disks = self.client.instances().get(
             project=self.credential.project,
@@ -58,10 +59,9 @@ class ProviderGce(ProviderBase):
         return "%s-data%s" % (volume.vm_name, len(all_disks))
     
     def _create_volume(self, volume, snapshot=None, *args, **kwargs):
-        disk_name = self.__get_new_disk_name(
-                         volume,
-                         project=self.credential.project)
-        
+        disk_name = self.__get_new_disk_name(volume) \
+                     if not volume.resource_id else \
+                     volume.resource_id
         
         config = {
             'name': disk_name,
@@ -71,6 +71,9 @@ class ProviderGce(ProviderBase):
             }
         }
 
+        if snapshot:
+            config['sourceSnapshot'] = "global/snapshots/%s" % (snapshot.description)
+
         disk_create = self.client.disks().insert(
             project=self.credential.project,
             zone=volume.zone,
@@ -79,7 +82,7 @@ class ProviderGce(ProviderBase):
         
         volume.identifier = disk_create.get('id')
         volume.resource_id = disk_name
-        volume.path = "/dev/disk/by-id/google-%s" % disk_name.rsplit("-", 1)[1]
+        volume.path = "/dev/disk/by-id/google-%s" % self.get_device_name(disk_name)
 
         return
     
@@ -94,25 +97,27 @@ class ProviderGce(ProviderBase):
             the code below is usefull in rollback command
             When we got an error on mount command.
         '''
-        try:
-            self.client.instances().detachDisk(
-                    project=self.credential.project,
-                    zone=volume.zone,
-                    instance=volume.vm_name,
-                    deviceName=volume.resource_id
-                ).execute()
-        except HttpError:
-            pass
+        #try:
         
-        
-        try:
-            self.client.disks().delete(
+        d = self.client.instances().detachDisk(
                 project=self.credential.project,
                 zone=volume.zone,
-                disk=volume.resource_id
+                instance=volume.vm_name,
+                deviceName=self.get_device_name(volume.resource_id)
             ).execute()
-        except HttpError:
-            pass
+        # except HttpError:
+        #     pass
+        
+        print(d)
+        
+        #try:
+        self.client.disks().delete(
+            project=self.credential.project,
+            zone=volume.zone,
+            disk=volume.resource_id
+        ).execute()
+        # except HttpError:
+        #     pass
         
         return
 
@@ -184,7 +189,37 @@ class ProviderGce(ProviderBase):
         ).execute()
     
         return True
-    
+
+    def _restore_snapshot(self, snapshot, volume):
+        self.stop_instance(volume)
+        self._delete_volume(volume)
+        #self._create_volume(volume, snapshot)
+
+        commands = CommandsGce(self)
+        commands._mount(volume, make_bash_command=False)
+
+        self.client.instances().start(
+            project=self.credential.project,
+            zone=volume.zone,
+            instance=volume.vm_name
+        ).execute() 
+
+        return True
+
+    def stop_instance(self, volume):
+        self.client.instances().stop(
+            project=self.credential.project,
+            zone=volume.zone,
+            instance=volume.vm_name
+        ).execute() 
+
+        return self.wait_instance_status(volume, 'TERMINATED')
+
+    def wait_instance_status(self, volume, status):
+        while self.get_instance_status(volume) != status:
+            sleep(5)
+
+        return True
 
     def get_disk(self, volume):
         return self.client.disks().get(
@@ -193,18 +228,29 @@ class ProviderGce(ProviderBase):
             disk=volume.resource_id
         ).execute()
     
+    def get_instance_status(self, volume):
+        instance = self.client.instances().get(
+            project=self.credential.project,
+            zone=volume.zone,
+            instance=volume.vm_name
+        ).execute() 
+
+        return instance.get('status')
+
+    def get_device_name(self, disk_name):
+        return disk_name.rsplit("-", 1)[1]
    
 class CommandsGce(CommandsBase):
 
     def __init__(self, provider):
         self.provider = provider
     
-    def _mount(self, volume, fstab=True, *args, **kw):
+    def _mount(self, volume, fstab=True, make_bash_command=True, *args, **kw):
         disk = self.provider.get_disk(volume)
         
         config = {
             "source": disk.get('selfLink'),
-            "deviceName": volume.resource_id.rsplit("-", 1)[1],
+            "deviceName": self.provider.get_device_name(volume.resource_id),
             "autoDelete": True
         }
 
@@ -215,6 +261,9 @@ class CommandsGce(CommandsBase):
                 instance=volume.vm_name,
                 body=config
             ).execute()
+
+        if not make_bash_command:
+            return 
 
         command = """while ! [[ -L "%s" ]];do echo "waiting symlink" && sleep 3; done""" % volume.path
         command += " && mkfs -t ext4 -F %s" % volume.path

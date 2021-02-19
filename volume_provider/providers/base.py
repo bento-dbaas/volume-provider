@@ -161,6 +161,9 @@ class ProviderBase(BasicProvider):
         volume.size_kb = snapshot.volume.size_kb
         volume.set_group(snapshot.volume.group)
         volume.owner_address = snapshot.volume.owner_address
+        volume.vm_name = snapshot.volume.vm_name
+        volume.zone = snapshot.volume.zone
+        volume.resource_id = snapshot.volume.resource_id
         self._restore_snapshot(snapshot, volume)
         volume.save()
         return volume
