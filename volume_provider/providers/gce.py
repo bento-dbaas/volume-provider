@@ -94,10 +94,7 @@ class ProviderGce(ProviderBase):
     def _add_access(self, volume, to_address, *args, **kwargs):
         pass
 
-    def umount(self, volume):
-        return self._delete_volume(volume, do_not_remove=True)
-
-    def _delete_volume(self, volume, do_not_remove=False):
+    def _delete_volume(self, volume):
         '''
             this mehtod detach and delete disks
             in 'happy flow' it does not necessary
@@ -118,15 +115,14 @@ class ProviderGce(ProviderBase):
         else:
             self.__wait_disk_detach(volume)
         
-        if not do_not_remove:
-            try:
-                self.client.disks().delete(
-                    project=self.credential.project,
-                    zone=volume.zone,
-                    disk=volume.resource_id
-                ).execute()
-            except HttpError:
-                pass
+        try:
+            self.client.disks().delete(
+                project=self.credential.project,
+                zone=volume.zone,
+                disk=volume.resource_id
+            ).execute()
+        except HttpError:
+            pass
         
         return
     
@@ -262,7 +258,7 @@ class ProviderGce(ProviderBase):
                 disk = self.get_disk(volume)
             except HttpError:
                 return False
-                
+
             if not disk.get('lastDetachTimestamp')\
              and disk.get('lastAttachTimestamp'):
                 sleep(3)
@@ -317,8 +313,7 @@ class CommandsGce(CommandsBase):
         return command
     
     def _umount(self, volume, data_directory=None, *args, **kw):
-        self.provider.umount(volume)
-        return 
+        return "umount %s" % data_directory
 
     def fstab_script(self, filer_path, mount_path):
         command = "cp /etc/fstab /etc/fstab.bkp"
