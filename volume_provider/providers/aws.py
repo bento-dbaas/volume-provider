@@ -193,6 +193,9 @@ class ProviderAWS(ProviderBase):
     def _restore_snapshot(self, snapshot, volume):
         ebs_snapshot = self.__get_snapshot(snapshot)
         self._create_volume(volume, ebs_snapshot)
+    
+    def _delete_old_volume(self, volume):
+        pass
 
 class CommandsAWS(CommandsBase):
 

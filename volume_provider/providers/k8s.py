@@ -105,6 +105,8 @@ class ProviderK8s(ProviderBase):
     def _add_access(self, volume, to_address, *args, **kwargs):
         pass
 
-
+    def _delete_old_volume(self, volume):
+        pass
+    
 class CommandsK8s(CommandsBase):
     pass

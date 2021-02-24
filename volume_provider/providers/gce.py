@@ -47,21 +47,22 @@ class ProviderGce(ProviderBase):
 
     def get_credential_add(self):
         return CredentialAddGce
-
-    def __get_new_disk_name(self, volume):
-
+    
+    def __get_instance_disks(self, zone, instance):
         all_disks = self.client.instances().get(
             project=self.credential.project,
-            zone=volume.zone,
-            instance=volume.vm_name
+            zone=zone,
+            instance=instance
         ).execute().get('disks')
+        return [x['deviceName'] for x in all_disks]
 
-        disk_names = [x['deviceName'] for x in all_disks]
-
-        if len(disk_names) == 1:
+    def __get_new_disk_name(self, volume):
+        all_disks = self.__get_instance_disks(volume.zone, volume.vm_name)
+        
+        if len(all_disks) == 1:
             disk_name = "data1"
         else:
-            disk_name = "data%s" % (int(disk_names[-1].split("data")[1]) + 1)
+            disk_name = "data%s" % (int(all_disks[-1].split("data")[1]) + 1)
                 
         return "%s-%s" % (volume.vm_name, disk_name)
     
@@ -100,7 +101,7 @@ class ProviderGce(ProviderBase):
             in 'happy flow' it does not necessary
             because we use "autoDelete" attr on disk attach
             the code below is usefull in snapshot restore
-            abd rollback command,
+            and db rollback command,
             When we got an error on mount command.
         '''
         try:
@@ -176,7 +177,8 @@ class ProviderGce(ProviderBase):
 
         snapshot.identifier = new_snapshot.get('id')
         snapshot.description = snapshot_name
-        return
+
+        return self.__wait_snapshot_status(snapshot, 'READY')
     
     def _get_snapshot_status(self, snapshot):
         ss = self.client.snapshots().get(
@@ -252,18 +254,9 @@ class ProviderGce(ProviderBase):
         return True
     
     def __wait_disk_detach(self, volume):
-        detached = False
-        while not detached:
-            try:
-                disk = self.get_disk(volume)
-            except HttpError:
-                return False
-
-            if not disk.get('lastDetachTimestamp')\
-             and disk.get('lastAttachTimestamp'):
-                sleep(3)
-            else:
-                detached = True
+        while self.get_device_name(volume.resource_id) in\
+         self.__get_instance_disks(volume.zone, volume.vm_name):
+            sleep(3)
 
         return True
 
@@ -281,6 +274,16 @@ class ProviderGce(ProviderBase):
                 sleep(3)
             else:
                 attach = True
+    
+    def __wait_snapshot_status(self, snapshot, status):
+        while self._get_snapshot_status(snapshot) != status:
+            sleep(3)
+        
+        return True
+    
+    def _delete_old_volume(self, volume):
+        return self._delete_volume(volume)
+
    
 class CommandsGce(CommandsBase):
 

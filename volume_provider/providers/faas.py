@@ -64,6 +64,9 @@ class ProviderFaaS(ProviderBase):
         export = self.client.export_get(volume)
         volume.resource_id = export['resource_id']
         volume.path = job_result['full_path']
+    
+    def _delete_old_volume(self, volume):
+        pass
 
 
 class CommandsFaaS(CommandsBase):
