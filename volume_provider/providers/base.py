@@ -112,7 +112,7 @@ class ProviderBase(BasicProvider):
         volume = self.load_volume(identifier)
         self._add_access(volume, to_address, access_type)
 
-    def _add_access(self, volume, to_address):
+    def _add_access(self, volume, to_address, *args, **kwargs):
         raise NotImplementedError
 
     def remove_access(self, identifier, to_address):
@@ -163,7 +163,6 @@ class ProviderBase(BasicProvider):
         volume.owner_address = snapshot.volume.owner_address
         volume.vm_name = snapshot.volume.vm_name
         volume.zone = snapshot.volume.zone
-        volume.resource_id = snapshot.volume.resource_id
         self._restore_snapshot(snapshot, volume)
         volume.save()
         return volume
@@ -267,7 +266,7 @@ die_if_error "Error to remove public key dbaas"
         volume = self.load_volume(identifier)
         return self._umount(volume, data_directory=data_directory)
 
-    def _umount(self, volume):
+    def _umount(self, volume, data_directory=None):
         raise NotImplementedError
 
     def clean_up(self, identifier):

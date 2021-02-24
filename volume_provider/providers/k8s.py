@@ -102,7 +102,7 @@ class ProviderK8s(ProviderBase):
         volume.resource_id = export['resource_id']
         volume.path = job_result['full_path']
 
-    def _add_access(self, volume, to_address):
+    def _add_access(self, volume, to_address, *args, **kwargs):
         pass
 
 

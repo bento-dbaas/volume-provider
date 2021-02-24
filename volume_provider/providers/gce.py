@@ -56,12 +56,17 @@ class ProviderGce(ProviderBase):
             instance=volume.vm_name
         ).execute().get('disks')
 
-        return "%s-data%s" % (volume.vm_name, len(all_disks))
+        disk_names = [x['deviceName'] for x in all_disks]
+
+        if len(disk_names) == 1:
+            disk_name = "data1"
+        else:
+            disk_name = "data%s" % (int(disk_names[-1].split("data")[1]) + 1)
+                
+        return "%s-%s" % (volume.vm_name, disk_name)
     
     def _create_volume(self, volume, snapshot=None, *args, **kwargs):
-        disk_name = self.__get_new_disk_name(volume) \
-                     if not volume.resource_id else \
-                     volume.resource_id
+        disk_name = self.__get_new_disk_name(volume) 
         
         config = {
             'name': disk_name,
@@ -84,45 +89,48 @@ class ProviderGce(ProviderBase):
         volume.resource_id = disk_name
         volume.path = "/dev/disk/by-id/google-%s" % self.get_device_name(disk_name)
 
-        return
+        return self.__wait_disk_create(volume)
     
-    def _add_access(self, volume, to_address):
+    def _add_access(self, volume, to_address, *args, **kwargs):
         pass
 
-    def _delete_volume(self, volume):
+    def umount(self, volume):
+        return self._delete_volume(volume, do_not_remove=True)
+
+    def _delete_volume(self, volume, do_not_remove=False):
         '''
             this mehtod detach and delete disks
             in 'happy flow' it does not necessary
             because we use "autoDelete" attr on disk attach
-            the code below is usefull in rollback command
+            the code below is usefull in snapshot restore
+            abd rollback command,
             When we got an error on mount command.
         '''
-        #try:
-        
-        d = self.client.instances().detachDisk(
-                project=self.credential.project,
-                zone=volume.zone,
-                instance=volume.vm_name,
-                deviceName=self.get_device_name(volume.resource_id)
+        try:
+            self.client.instances().detachDisk(
+                    project=self.credential.project,
+                    zone=volume.zone,
+                    instance=volume.vm_name,
+                    deviceName=self.get_device_name(volume.resource_id)
             ).execute()
-        # except HttpError:
-        #     pass
+        except HttpError:
+            pass
+        else:
+            self.__wait_disk_detach(volume)
         
-        print(d)
-        
-        #try:
-        self.client.disks().delete(
-            project=self.credential.project,
-            zone=volume.zone,
-            disk=volume.resource_id
-        ).execute()
-        # except HttpError:
-        #     pass
+        if not do_not_remove:
+            try:
+                self.client.disks().delete(
+                    project=self.credential.project,
+                    zone=volume.zone,
+                    disk=volume.resource_id
+                ).execute()
+            except HttpError:
+                pass
         
         return
-
+    
     def _resize(self, volume, new_size_kb):
-
         if new_size_kb <= volume.size_kb:
             raise Exception("New size must be greater than current size")
 
@@ -191,20 +199,7 @@ class ProviderGce(ProviderBase):
         return True
 
     def _restore_snapshot(self, snapshot, volume):
-        self.stop_instance(volume)
-        self._delete_volume(volume)
-        #self._create_volume(volume, snapshot)
-
-        commands = CommandsGce(self)
-        commands._mount(volume, make_bash_command=False)
-
-        self.client.instances().start(
-            project=self.credential.project,
-            zone=volume.zone,
-            instance=volume.vm_name
-        ).execute() 
-
-        return True
+        return self._create_volume(volume, snapshot=snapshot)
 
     def stop_instance(self, volume):
         self.client.instances().stop(
@@ -213,15 +208,10 @@ class ProviderGce(ProviderBase):
             instance=volume.vm_name
         ).execute() 
 
-        return self.wait_instance_status(volume, 'TERMINATED')
-
-    def wait_instance_status(self, volume, status):
-        while self.get_instance_status(volume) != status:
-            sleep(5)
-
-        return True
+        return self.__wait_instance_status(volume, 'TERMINATED')
 
     def get_disk(self, volume):
+
         return self.client.disks().get(
             project=self.credential.project,
             zone=volume.zone,
@@ -239,38 +229,85 @@ class ProviderGce(ProviderBase):
 
     def get_device_name(self, disk_name):
         return disk_name.rsplit("-", 1)[1]
+    
+    def attach_disk(self, volume):
+        disk = self.get_disk(volume)
+        
+        config = {
+            "source": disk.get('selfLink'),
+            "deviceName": self.get_device_name(volume.resource_id),
+            "autoDelete": True
+        }
+
+        self.client\
+            .instances().attachDisk(
+                project=self.credential.project,
+                zone=volume.zone,
+                instance=volume.vm_name,
+                body=config
+            ).execute()
+
+        return self.__wait_disk_attach(volume)
+    
+    def __wait_instance_status(self, volume, status):
+        while self.get_instance_status(volume) != status:
+            sleep(5)
+
+        return True
+    
+    def __wait_disk_detach(self, volume):
+        detached = False
+        while not detached:
+            try:
+                disk = self.get_disk(volume)
+            except HttpError:
+                return False
+                
+            if not disk.get('lastDetachTimestamp')\
+             and disk.get('lastAttachTimestamp'):
+                sleep(3)
+            else:
+                detached = True
+
+        return True
+
+    def __wait_disk_create(self, volume, retry_not_found=3):
+        while self.get_disk(volume).get('status') != "READY":
+            sleep(3)
+
+        return True
+    
+    def __wait_disk_attach(self, volume):
+        attach = False
+        while not attach:
+            disk = self.get_disk(volume)
+            if not disk.get('lastAttachTimestamp'):
+                sleep(3)
+            else:
+                attach = True
    
 class CommandsGce(CommandsBase):
 
     def __init__(self, provider):
         self.provider = provider
     
-    def _mount(self, volume, fstab=True, make_bash_command=True, *args, **kw):
-        disk = self.provider.get_disk(volume)
-        
-        config = {
-            "source": disk.get('selfLink'),
-            "deviceName": self.provider.get_device_name(volume.resource_id),
-            "autoDelete": True
-        }
+    def _mount(self, volume, fstab=True, *args, **kw):
+        self.provider.attach_disk(volume)
 
-        self.provider.client\
-            .instances().attachDisk(
-                project=self.provider.credential.project,
-                zone=volume.zone,
-                instance=volume.vm_name,
-                body=config
-            ).execute()
+        # waiting symlink creation
+        command = """while ! [[ -L "%(disk_path)s" ]];do echo "waiting symlink" && sleep 3; done"""
 
-        if not make_bash_command:
-            return 
+        # verify if volume is ex4 and create a fs
+        command += """ && formatted=$(blkid -o value -s TYPE %(disk_path)s | grep ext4 | wc -l);"""
+        command += """if [ "$formatted" -eq 0 ]; then  mkfs -t ext4 -F %(disk_path)s;fi"""
 
-        command = """while ! [[ -L "%s" ]];do echo "waiting symlink" && sleep 3; done""" % volume.path
-        command += " && mkfs -t ext4 -F %s" % volume.path
-        command += " && mount %(disk_path)s %(data_directory)s" % {
+        # mount disk
+        command += " && mount %(disk_path)s %(data_directory)s" 
+        command = command % {
             "disk_path": volume.path,
             "data_directory": self.data_directory
         }
+
 
         if fstab:
             command += " && %s" % self.fstab_script(
@@ -278,11 +315,15 @@ class CommandsGce(CommandsBase):
                                     self.data_directory)
 
         return command
+    
+    def _umount(self, volume, data_directory=None, *args, **kw):
+        self.provider.umount(volume)
+        return 
 
     def fstab_script(self, filer_path, mount_path):
         command = "cp /etc/fstab /etc/fstab.bkp"
         command += " && sed \'/\{mount_path}/d\' /etc/fstab.bkp > /etc/fstab"
-        command += ' && echo "#Database data disk\n{filer_path}  {mount_path}    ext4 defaults    0   0" >> /etc/fstab'
+        command += ' && echo "{filer_path}  {mount_path}    ext4 defaults    0   0" >> /etc/fstab'
         return command.format(mount_path=mount_path, filer_path=filer_path)
 
         

@@ -131,7 +131,7 @@ class ProviderAWS(ProviderBase):
         volume.resource_id = ebs.name
         volume.path = self.credential.next_device(volume.owner_address)
 
-    def _add_access(self, volume, to_address):
+    def _add_access(self, volume, to_address, *args, **kwargs):
         volume.owner_address = to_address
         volume.save()
         return
