@@ -177,7 +177,10 @@ class ProviderBase(BasicProvider):
     
     def _delete_old_volume(self, volume):
         pass
-
+    
+    def get_volumes_from(self, **kwargs):
+        return Volume.objects(**kwargs).values_list('resource_id')
+    
 class CommandsBase(BasicProvider):
 
     def __init__(self, data_directory="/data"):

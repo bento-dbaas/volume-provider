@@ -16,10 +16,10 @@ from volume_provider.credentials.gce import CredentialGce, CredentialAddGce
 from volume_provider.providers.base import ProviderBase, CommandsBase
 from volume_provider.clients.team import TeamClient
 
-
 class ProviderGce(ProviderBase):
 
-    
+    seconds_to_wait = 3
+
     def get_commands(self):
         return CommandsGce(self)
 
@@ -48,23 +48,19 @@ class ProviderGce(ProviderBase):
     def get_credential_add(self):
         return CredentialAddGce
     
-    def __get_instance_disks(self, zone, instance):
-        all_disks = self.client.instances().get(
-            project=self.credential.project,
-            zone=zone,
-            instance=instance
-        ).execute().get('disks')
-        return [x['deviceName'] for x in all_disks]
-
-    def __get_new_disk_name(self, volume):
-        all_disks = self.__get_instance_disks(volume.zone, volume.vm_name)
+    def __get_instance_disks(self, zone, instance, group):
+        vol = self.get_volumes_from(zone=zone, vm_name=instance, group=group)
+        return [self.get_device_name(x) for x in vol] 
         
-        if len(all_disks) == 1:
+    def __get_new_disk_name(self, volume):
+        all_disks = self.__get_instance_disks(volume.zone, volume.vm_name, volume.group)
+        
+        if not len(all_disks):
             disk_name = "data1"
         else:
             disk_name = "data%s" % (int(all_disks[-1].split("data")[1]) + 1)
                 
-        return "%s-%s" % (volume.vm_name, disk_name)
+        return "%s-%s" % (volume.group, disk_name)
     
     def _create_volume(self, volume, snapshot=None, *args, **kwargs):
         disk_name = self.__get_new_disk_name(volume) 
@@ -95,7 +91,7 @@ class ProviderGce(ProviderBase):
     def _add_access(self, volume, to_address, *args, **kwargs):
         pass
 
-    def _delete_volume(self, volume):
+    def __destroy_volume(self, volume):
         '''
             this mehtod detach and delete disks
             in 'happy flow' it does not necessary
@@ -147,7 +143,7 @@ class ProviderGce(ProviderBase):
             dict_var[key] = var
 
     def __get_snapshot_name(self, volume):
-        return "s-%(volume_name)s-%(timestamp)s" % {
+        return "snapshot-%(volume_name)s-%(timestamp)s" % {
             'volume_name': volume.resource_id.replace('-',''),
             'timestamp': datetime.now().strftime('%Y%m%d%H%M%S%f')
         }
@@ -249,20 +245,20 @@ class ProviderGce(ProviderBase):
     
     def __wait_instance_status(self, volume, status):
         while self.get_instance_status(volume) != status:
-            sleep(5)
+            sleep(self.seconds_to_wait)
 
         return True
     
     def __wait_disk_detach(self, volume):
         while self.get_device_name(volume.resource_id) in\
-         self.__get_instance_disks(volume.zone, volume.vm_name):
-            sleep(3)
+         self.__get_instance_disks(volume.zone, volume.vm_name, volume.group):
+            sleep(self.seconds_to_wait)
 
         return True
 
     def __wait_disk_create(self, volume, retry_not_found=3):
         while self.get_disk(volume).get('status') != "READY":
-            sleep(3)
+            sleep(self.seconds_to_wait)
 
         return True
     
@@ -271,18 +267,21 @@ class ProviderGce(ProviderBase):
         while not attach:
             disk = self.get_disk(volume)
             if not disk.get('lastAttachTimestamp'):
-                sleep(3)
+                sleep(self.seconds_to_wait)
             else:
                 attach = True
     
     def __wait_snapshot_status(self, snapshot, status):
         while self._get_snapshot_status(snapshot) != status:
-            sleep(3)
+            sleep(self.seconds_to_wait)
         
         return True
     
     def _delete_old_volume(self, volume):
-        return self._delete_volume(volume)
+        return self.__destroy_volume(volume)
+    
+    def _delete_volume(self, volume): 
+        pass
 
    
 class CommandsGce(CommandsBase):
@@ -323,7 +322,3 @@ class CommandsGce(CommandsBase):
         command += " && sed \'/\{mount_path}/d\' /etc/fstab.bkp > /etc/fstab"
         command += ' && echo "{filer_path}  {mount_path}    ext4 defaults    0   0" >> /etc/fstab'
         return command.format(mount_path=mount_path, filer_path=filer_path)
-
-        
-
-    
