@@ -6,7 +6,7 @@ Native:
 ```shell
 $cp .export-volume-provider-local-base.sh .export-volume-provider-local-dev.sh
 ```
- - Replace variables in `.export-volume-provider-local-dev.sh` file.
+ - Replace variables in `.export-volume-provider-local-dev.sh` file (or configure your local env).
  - install requirements:
   ```shell
 $pip install -r requirements.txt
