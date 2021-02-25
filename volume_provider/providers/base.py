@@ -176,7 +176,7 @@ class ProviderBase(BasicProvider):
         volume.delete()
     
     def _delete_old_volume(self, volume):
-        raise NotImplementedError
+        pass
 
 class CommandsBase(BasicProvider):
 
