@@ -201,9 +201,12 @@ die_if_error()
     def copy_files(self, *args, **kw):
         return self._copy_files(*args, **kw)
 
-    def mount(self, identifier, fstab=True):
+    def mount(self, identifier, fstab=True, host_vm=None, host_zone=None):
         volume = self.load_volume(identifier)
-        return self._mount(volume, fstab=fstab)
+        return self._mount(volume, 
+                           fstab=fstab,
+                           host_vm=host_vm,
+                           host_zone=host_zone)
 
     def scp(self, identifier, source_dir, target_ip, target_dir):
         snap = Snapshot.objects(identifier=identifier).get()
@@ -269,7 +272,7 @@ rm -f /root/.ssh/dbaas.key*
 die_if_error "Error to remove public key dbaas"
 """.format(**kw)
 
-    def _mount(self, volume):
+    def _mount(self, volume, *args, **kwargs):
         raise NotImplementedError
 
     def umount(self, identifier, data_directory):

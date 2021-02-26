@@ -105,7 +105,7 @@ scp -i "/root/.ssh/dbaas.key" -Crp -o StrictHostKeyChecking=no -o UserKnownHosts
 die_if_error "Error scp from {snap_dir} to {target_ip}:{target_dir}"
 """.format(**kw)
 
-    def _mount(self, volume, fstab=True):
+    def _mount(self, volume, fstab=True, *args, **kwargs):
         script = self.die_if_error_script()
         if fstab:
             script += self.fstab_script(volume.path, self.data_directory)

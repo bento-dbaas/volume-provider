@@ -49,16 +49,14 @@ class ProviderGce(ProviderBase):
         return CredentialAddGce
     
     def __get_instance_disks(self, zone, instance, group):
-        vol = self.get_volumes_from(zone=zone, vm_name=instance, group=group)
+        vol = self.get_volumes_from(group=group)
         return [self.get_device_name(x) for x in vol] 
         
     def __get_new_disk_name(self, volume):
         all_disks = self.__get_instance_disks(volume.zone, volume.vm_name, volume.group)
-        
-        if not len(all_disks):
-            disk_name = "data1"
-        else:
-            disk_name = "data%s" % (int(all_disks[-1].split("data")[1]) + 1)
+        disk_name = "data%s" % (int(all_disks[-1].split("data")[1]) + 1)\
+                    if len(all_disks)\
+                    else "data1"
                 
         return "%s-%s" % (volume.group, disk_name)
     
@@ -177,13 +175,11 @@ class ProviderGce(ProviderBase):
         return self.__wait_snapshot_status(snapshot, 'READY')
     
     def _get_snapshot_status(self, snapshot):
-        ss = self.client.snapshots().get(
+        return self.client.snapshots().get(
             project=self.credential.project,
             snapshot=snapshot.description
-        ).execute()
-            
-        return ss.get('status')
-    
+        ).execute().get('status')
+                
     def _remove_snapshot(self, snapshot, *args, **kwrgs):
         self.client.snapshots().delete(
             project=self.credential.project,
@@ -195,17 +191,7 @@ class ProviderGce(ProviderBase):
     def _restore_snapshot(self, snapshot, volume):
         return self._create_volume(volume, snapshot=snapshot)
 
-    def stop_instance(self, volume):
-        self.client.instances().stop(
-            project=self.credential.project,
-            zone=volume.zone,
-            instance=volume.vm_name
-        ).execute() 
-
-        return self.__wait_instance_status(volume, 'TERMINATED')
-
     def get_disk(self, volume):
-
         return self.client.disks().get(
             project=self.credential.project,
             zone=volume.zone,
@@ -289,7 +275,13 @@ class CommandsGce(CommandsBase):
     def __init__(self, provider):
         self.provider = provider
     
-    def _mount(self, volume, fstab=True, *args, **kw):
+    def _mount(self, volume, fstab=True, 
+               host_vm=None, host_zone=None, *args, **kwargs):
+        
+        volume.vm_name = host_vm or volume.vm_name
+        volume.zone = host_zone or volume.zone
+        volume.save()
+
         self.provider.attach_disk(volume)
 
         # waiting symlink creation

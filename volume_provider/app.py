@@ -313,11 +313,16 @@ def command_mount(provider_name, env, identifier):
     data = request.get_json()
     with_fstab = data.get("with_fstab", True)
     data_directory = data.get("data_directory", "/data")
+    host_vm = data.get("host_vm", None)
+    host_zone = data.get("host_zone", None)
 
     try:
         provider = build_provider(provider_name, env)
         provider.commands.data_directory = data_directory
-        command = provider.commands.mount(identifier, fstab=with_fstab)
+        command = provider.commands.mount(identifier, 
+                                          fstab=with_fstab, 
+                                          host_vm=host_vm,
+                                          host_zone=host_zone)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
