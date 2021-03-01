@@ -11,6 +11,6 @@ install:
   - mongod --dbpath=data/db &
   - sleep 3
 script:
-  - mongo --eval 'db.hostInfo()' && make test
+  - make test
 notifications:
   email: false
