@@ -48,12 +48,22 @@ class ProviderGce(ProviderBase):
     def get_credential_add(self):
         return CredentialAddGce
     
-    def __get_instance_disks(self, zone, instance, group):
+    def __get_instance_disks(self, zone, vm_name):
+        all_disks = self.client.instances().get(
+                        project=self.credential.project,
+                        zone=zone,
+                        instance=vm_name
+                    ).execute().get("disks")
+
+        return [x['deviceName'] for x in all_disks]
+
+
+    def __get_volumes(self, zone, instance, group):
         vol = self.get_volumes_from(group=group)
         return [self.get_device_name(x) for x in vol] 
         
     def __get_new_disk_name(self, volume):
-        all_disks = self.__get_instance_disks(volume.zone, volume.vm_name, volume.group)
+        all_disks = self.__get_volumes(volume.zone, volume.vm_name, volume.group)
         disk_name = "data%s" % (int(all_disks[-1].split("data")[1]) + 1)\
                     if len(all_disks)\
                     else "data1"
@@ -141,7 +151,7 @@ class ProviderGce(ProviderBase):
             dict_var[key] = var
 
     def __get_snapshot_name(self, volume):
-        return "snapshot-%(volume_name)s-%(timestamp)s" % {
+        return "ss-%(volume_name)s-%(timestamp)s" % {
             'volume_name': volume.resource_id.replace('-',''),
             'timestamp': datetime.now().strftime('%Y%m%d%H%M%S%f')
         }
@@ -237,7 +247,7 @@ class ProviderGce(ProviderBase):
     
     def __wait_disk_detach(self, volume):
         while self.get_device_name(volume.resource_id) in\
-         self.__get_instance_disks(volume.zone, volume.vm_name, volume.group):
+         self.__get_instance_disks(volume.zone, volume.vm_name):
             sleep(self.seconds_to_wait)
 
         return True
