@@ -6,7 +6,8 @@ class CredentialGce(CredentialBase):
     def project(self):
         return self.content['project']
 class CredentialAddGce(CredentialAdd):
-
     @property
     def valid_fields(self):
-        return []
+        return ['provider', 'service_account', 
+                'environment', 'offerings', 
+                'project', 'availability_zones', 'subnetwork']
