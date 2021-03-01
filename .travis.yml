@@ -1,4 +1,5 @@
 sudo: false
+language: python
 env:
   global:
     - MONGODB_VERSION=2.6.10
@@ -11,3 +12,5 @@ install:
   - sleep 3
 script:
   - mongo --eval 'db.hostInfo()' && make test
+notifications:
+  email: false
