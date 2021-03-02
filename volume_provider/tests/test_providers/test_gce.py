@@ -3,6 +3,7 @@ from unittest import TestCase
 from unittest.mock import patch, MagicMock, PropertyMock
 from volume_provider.providers.gce import ProviderGce
 from volume_provider.credentials.gce import CredentialAddGce
+from volume_provider.models import Volume
 from .fakes.gce import FAKE_TAGS, FAKE_CREDENTIAL
 
 import googleapiclient
@@ -36,8 +37,6 @@ class TestCredentialGCE(TestCase):
         self.assertFalse(success)
         self.assertIn("Required fields",error)
 
-
-
     @patch(
         'volume_provider.providers.gce.CredentialGce.get_content'
     )
@@ -52,5 +51,14 @@ class TestCredentialGCE(TestCase):
         values = deepcopy(FAKE_CREDENTIAL)
         values.update(kwargs)
         content.return_value = values
+    
+    # @patch(
+    #     'volume_provider.providers.gce.CredentialGce.get_content'
+    # )
+    # def test_create_disk(self, content):
+    #     self.build_credential_content(content)
+
+    #     self.provider.create_volume(size_kb=1024, group="tstgroup", 
+    #                                 to_address=None, zone="tst")
 
    

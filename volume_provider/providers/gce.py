@@ -57,7 +57,6 @@ class ProviderGce(ProviderBase):
 
         return [x['deviceName'] for x in all_disks]
 
-
     def __get_volumes(self, zone, instance, group):
         vol = self.get_volumes_from(group=group)
         return [self.get_device_name(x) for x in vol] 
@@ -99,15 +98,7 @@ class ProviderGce(ProviderBase):
     def _add_access(self, volume, to_address, *args, **kwargs):
         pass
 
-    def __destroy_volume(self, volume):
-        '''
-            this mehtod detach and delete disks
-            in 'happy flow' it does not necessary
-            because we use "autoDelete" attr on disk attach
-            the code below is usefull in snapshot restore
-            and db rollback command,
-            When we got an error on mount command.
-        '''
+    def __destroy_volume(self, volume, snapshot_offset=0):
         try:
             self.client.instances().detachDisk(
                     project=self.credential.project,
@@ -119,6 +110,12 @@ class ProviderGce(ProviderBase):
             pass
         else:
             self.__wait_disk_detach(volume)
+
+        snapshots = self.get_snapshots_from(offset=snapshot_offset,**{'volume': volume})
+        for snap in snapshots:
+            self._remove_snapshot(snap)
+            snap.delete()
+        
         
         try:
             self.client.disks().delete(
@@ -166,6 +163,8 @@ class ProviderGce(ProviderBase):
         self.__verify_none(ex_metadata, 'db_name', db_name)
         self.__verify_none(ex_metadata, 'team', team)
         self.__verify_none(ex_metadata, TAG_BACKUP_DBAAS.lower(), 1)
+
+        ex_metadata['group'] = volume.group
         
         config = {
             'labels': ex_metadata,
@@ -179,6 +178,7 @@ class ProviderGce(ProviderBase):
             body=config
         ).execute()
 
+        snapshot.labels = ex_metadata
         snapshot.identifier = new_snapshot.get('id')
         snapshot.description = snapshot_name
 
@@ -191,10 +191,13 @@ class ProviderGce(ProviderBase):
         ).execute().get('status')
                 
     def _remove_snapshot(self, snapshot, *args, **kwrgs):
-        self.client.snapshots().delete(
-            project=self.credential.project,
-            snapshot=snapshot.description
-        ).execute()
+        try:
+            self.client.snapshots().delete(
+                project=self.credential.project,
+                snapshot=snapshot.description
+            ).execute()
+        except Exception as ex:
+            print('Error when delete snapshot', ex)
     
         return True
 
@@ -274,10 +277,23 @@ class ProviderGce(ProviderBase):
         return True
     
     def _delete_old_volume(self, volume):
+        return self.__destroy_volume(volume, snapshot_offset=1)
+    
+    def _delete_volume(self, volume):
+        self._remove_all_snapshots(volume.group)
         return self.__destroy_volume(volume)
     
-    def _delete_volume(self, volume): 
-        pass
+    def _remove_all_snapshots(self, group):
+        snaps = self.client.snapshots().list(
+            project=self.credential.project,
+            filter="labels.group=%s"  % group
+        ).execute().get('items', [])
+
+        for ss in snaps:
+            self.client.snapshots().delete(
+                project=self.credential.project,
+                snapshot=ss.get('name')
+            ).execute()
 
    
 class CommandsGce(CommandsBase):

@@ -18,10 +18,10 @@ FAKE_CREDENTIAL = {
         "project_id":"fake-proj-id",
         "private_key_id":"fake_pvt_key_id",
         "private_key":'-----BEGIN RSA PRIVATE KEY-----\nMIICXAIBAAKBgQDgsEaDGCiCm/dFT1pHzvok1PTpSa9lsuUBVzUt4WeXXwdH7jC1\n46rAULeNCZwJQYgjPzpikwDd3lKnr395euK90EEqQLdMh1EJK0/+ja0OfKxxFLZv\noqOyKsjxWAipEYKjMvWH/vYQZNPG3gMaf4X5RxuvSggXAVDq4MRkw+ZtGQIDAQAB\nAoGAbgdEcFv7MoJn40QJpNKBglnamQchYj7pj++BtjcEQIcjjKDir5+OdWDRkbpb\n89hob0I+OBleukdt2HnDhdycfYXftqShM4Q03fWxCEK3OacRw4CplYLaxlGWxMuZ\nGVFsE0gAS4QXu87ZutXeXIXkd2Bv5F53gBPOMQCtI+qXfVUCQQD99hTa4QDlmZpO\ngV4Ah1IHBVddjv/E+68rlw952j0CwM4fFLTWQC3iRQqfWngLw9t7ZNyKHzQJ/o38\n8yZDF6STAkEA4n4JDg+6M/4K4nZ3vnTKnbeLSTV5i9PsNlBf5hAy2ABLDd35FfBl\nQuX009j6nCUdUWM0LPY6OuQmEPkVaKJ/IwJAL0GyQcRqqU660u7psgl8LwhEaIlq\neJooz2CtpYwBnFiKQmhU+iU5JIiaYGqyOeY5Gi37h8wkn9N5Ul9geE2W9wJAIPBJ\natUYtFT+yj6GXZlomhVGWWhAe/hfAusfdzrl2gn44FRm1Cz43QjKWUDV+X1gTSTL\nQrqwbz4c1x0SYvw21wJBAI7onsip6jWZDTevWu0hHozm5pB20EPcYVobwClwv0Q1\n+WLKuBnXEVlUMaJC/e7VSyY9bwbZQEUpF0jvVmTd3nw=\n-----END RSA PRIVATE KEY-----',
-        "client_email":"fake_mail@fakemail.com",
+        "client_email":"2423423-compute@developer.gserviceaccount.com",
         "client_id":"fake_client_id",
-        "auth_uri":"https://fake_url_auth.com/auth",
-        "token_uri":"https://fakeurlauth.com/token",
+        "auth_uri":"https://accounts.google.com/o/oauth2/auth",
+        "token_uri":"https://oauth2.googleapis.com/token",
         "auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs",
         "client_x509_cert_url":"https://fake_cert_url.com"
     },

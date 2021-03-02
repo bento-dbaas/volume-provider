@@ -1,5 +1,5 @@
 from mongoengine import (Document, StringField, IntField, ReferenceField,
-                         CASCADE)
+                         CASCADE, DictField)
 
 
 class Volume(Document):
@@ -53,6 +53,7 @@ class Snapshot(Document):
     volume = ReferenceField(Volume, required=True, reverse_delete_rule=CASCADE)
     identifier = StringField(required=True, max_length=255)
     description = StringField(required=True, max_length=255)
+    labels = DictField(required=False)
 
     @property
     def uuid(self):

@@ -179,7 +179,16 @@ class ProviderBase(BasicProvider):
         pass
     
     def get_volumes_from(self, **kwargs):
-        return Volume.objects(**kwargs).values_list('resource_id')
+        return Volume.objects.filter(**kwargs).values_list('resource_id')
+    
+    def get_snapshots_from(self,offset=0, **kwargs):
+        snaps = Snapshot.objects.filter(**kwargs)
+        if not snaps: return []
+        snaps = list(snaps)
+        if offset:
+            return snaps[:-offset]
+        
+        return snaps
     
 class CommandsBase(BasicProvider):
 
