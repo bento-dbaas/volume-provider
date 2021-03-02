@@ -5,6 +5,8 @@ from volume_provider.providers.gce import ProviderGce
 from volume_provider.credentials.gce import CredentialAddGce
 from .fakes.gce import FAKE_TAGS, FAKE_CREDENTIAL
 
+import googleapiclient
+
 
 ENVIRONMENT = "dev"
 ENGINE = "redis"
@@ -35,3 +37,20 @@ class TestCredentialGCE(TestCase):
         self.assertIn("Required fields",error)
 
 
+
+    @patch(
+        'volume_provider.providers.gce.CredentialGce.get_content'
+    )
+    def test_build_client(self, content):
+        self.build_credential_content(content)
+
+        self.assertEqual(
+            type(self.provider.build_client()), googleapiclient.discovery.Resource
+        )
+
+    def build_credential_content(self, content, **kwargs):
+        values = deepcopy(FAKE_CREDENTIAL)
+        values.update(kwargs)
+        content.return_value = values
+
+   
