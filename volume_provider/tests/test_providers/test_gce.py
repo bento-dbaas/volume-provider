@@ -72,7 +72,7 @@ class CreateVolumeTestCase(GCPBaseTestCase):
         new=MagicMock(return_value={'status': 'READY'}))
     @patch('volume_provider.providers.gce.ProviderGce._get_new_disk_name',
         new=MagicMock(return_value='fake_group-disk2'))
-    def test_create_disk_flow(self, client_mock):
+    def test_create_disk(self, client_mock):
         disk_insert = client_mock().disks().insert().execute
         disk_insert.return_value = {'id': 'disk_id123'}
 
@@ -126,4 +126,52 @@ class CreateVolumeTestCase(GCPBaseTestCase):
         self.assertTrue(disk_detach.called_once)
         self.assertTrue(snapshots_list.called_once)
         self.assertTrue(snapshots_delete.called)
+        self.assertTrue(deleted)
+    
+    @patch('volume_provider.providers.gce.ProviderGce.build_client')
+    @patch('volume_provider.providers.gce.CredentialGce.get_content',
+        new=MagicMock(return_value=FAKE_CREDENTIAL))
+    @patch('volume_provider.providers.gce.ProviderGce.get_snapshots_from',
+        new=MagicMock(return_value=[]))
+    @patch('volume_provider.providers.gce.ProviderGce._get_snapshot_status',
+        new=MagicMock(return_value='READY'))
+    def test_create_snapshot(self, client_mock):
+        take_snap = client_mock().disks().createSnapshot().execute
+        take_snap.return_value = {'id': 'idtest'}
+        
+        snap = self.provider._take_snapshot(self.disk, self.snapshot, 
+                                            'fake_team', 'fake_engine', 'fake_db_name')
+        
+
+        self.assertTrue(take_snap.called)
+        self.assertEqual(self.snapshot.labels['db_name'], 'fake_db_name')
+        self.assertEqual(self.snapshot.identifier, take_snap.return_value['id'])
+        self.assertTrue(snap)
+    
+
+    @patch('volume_provider.providers.gce.ProviderGce.build_client')
+    @patch('volume_provider.providers.gce.CredentialGce.get_content',
+        new=MagicMock(return_value=FAKE_CREDENTIAL))
+    @patch('volume_provider.providers.gce.ProviderGce.get_disk',
+        new=MagicMock(return_value={'status': 'READY'}))
+    @patch('volume_provider.providers.gce.ProviderGce._get_new_disk_name',
+        new=MagicMock(return_value='fake_group-disk2'))
+    def test_create_disk_with_snapshot(self, client_mock):
+        disk_insert = client_mock().disks().insert().execute
+        disk_insert.return_value = {'id': 'disk_id123'}
+
+        created = self.provider._create_volume(self.disk, self.snapshot)
+        
+        self.assertTrue(created)
+
+    @patch('volume_provider.providers.gce.ProviderGce.build_client')
+    @patch('volume_provider.providers.gce.CredentialGce.get_content',
+        new=MagicMock(return_value=FAKE_CREDENTIAL))
+    def test_delete_snapshot(self, client_mock):
+        delete_snap = client_mock().snapshots().delete().execute
+
+        deleted = self.provider._remove_snapshot(self.snapshot)
+        
+
+        self.assertTrue(delete_snap.called)
         self.assertTrue(deleted)

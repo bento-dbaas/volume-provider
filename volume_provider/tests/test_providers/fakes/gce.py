@@ -60,12 +60,20 @@ FAKE_CREDENTIAL = {
 FAKE_DISK_OBJ = recordclass('FakeDiskObj', 'id name zone identifier\
                                            vm_name group convert_kb_to_gb\
                                            size_kb resource_id path')
+FAKE_SNAP_OBJ = recordclass('FakeSnapshotObj', 'id volume identifier description labels')
+
+
 FAKE_DISK = FAKE_DISK_OBJ(
     '507f191e810c19729de860ea', 'fake_disk_name', 
     'fake_zone', 'fake_identifier', 
     'fake_vm_name', 'fake_group',
     lambda x,to_int: x/1000/1000, 1024,
     '0000123', ''
+)
+
+FAKE_SNAP = FAKE_SNAP_OBJ(
+    '507f191e810c19729de8602', FAKE_DISK,
+    'fake_identifier', 'fake_description', 'labels'
 )
 
 FAKE_DISK_LIST = ['fake_group-data1', 'fake_group-data2']

@@ -146,7 +146,7 @@ class ProviderGce(ProviderBase):
         return True
 
     def __verify_none(self, dict_var, key, var):
-        if var:
+        if var and key:
             dict_var[key] = var
 
     def __get_snapshot_name(self, volume):
@@ -164,7 +164,7 @@ class ProviderGce(ProviderBase):
         self.__verify_none(ex_metadata, 'engine', engine)
         self.__verify_none(ex_metadata, 'db_name', db_name)
         self.__verify_none(ex_metadata, 'team', team)
-        self.__verify_none(ex_metadata, TAG_BACKUP_DBAAS.lower(), 1)
+        self.__verify_none(ex_metadata, TAG_BACKUP_DBAAS.lower() if TAG_BACKUP_DBAAS else None, 1)
 
         ex_metadata['group'] = volume.group
         

@@ -9,7 +9,7 @@ from volume_provider.providers import base
 from volume_provider.tests.test_credentials import CredentialAddFake, FakeMongoDB
 from volume_provider.providers import ProviderGce
 
-from .fakes.gce import FAKE_CREDENTIAL, FAKE_DISK
+from .fakes.gce import FAKE_CREDENTIAL, FAKE_DISK, FAKE_SNAP
 
 ENVIRONMENT = "dev"
 ENGINE = "redis"
@@ -102,6 +102,7 @@ class GCPBaseTestCase(TestCase):
     def setUp(self):
         self.provider = ProviderGce(ENVIRONMENT, ENGINE)
         self.disk = FAKE_DISK
+        self.snapshot = FAKE_SNAP
 
     def build_credential_content(self, content, **kwargs):
         values = deepcopy(FAKE_CREDENTIAL)
