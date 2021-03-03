@@ -4,7 +4,8 @@ from unittest.mock import patch, MagicMock, PropertyMock
 from volume_provider.providers.gce import ProviderGce
 from volume_provider.credentials.gce import CredentialAddGce
 from volume_provider.models import Volume
-from .fakes.gce import FAKE_TAGS, FAKE_CREDENTIAL
+from .fakes.gce import *
+from .base import GCPBaseTestCase
 
 import googleapiclient
 
@@ -17,7 +18,7 @@ ENGINE = "redis"
 #     'volume_provider.providers.gce.HOST_ORIGIN_TAG',
 #     new=str('dbaas')
 # )
-class TestCredentialGCE(TestCase):
+class TestCredentialGCE(GCPBaseTestCase):
 
     def setUp(self):
         self.provider = ProviderGce(ENVIRONMENT, ENGINE)
@@ -51,14 +52,20 @@ class TestCredentialGCE(TestCase):
         values = deepcopy(FAKE_CREDENTIAL)
         values.update(kwargs)
         content.return_value = values
-    
-    # @patch(
-    #     'volume_provider.providers.gce.CredentialGce.get_content'
-    # )
-    # def test_create_disk(self, content):
-    #     self.build_credential_content(content)
 
-    #     self.provider.create_volume(size_kb=1024, group="tstgroup", 
-    #                                 to_address=None, zone="tst")
+class CreateVolumeTestCase(GCPBaseTestCase):
+    
+    @patch('volume_provider.providers.gce.ProviderGce._get_volumes')
+    def test_get_disk_name(self, volume_list):
+        volume_list.return_value = FAKE_DISK_LIST
+        disk_name = self.provider._get_new_disk_name(self.disk)
+        self.assertEqual(disk_name, 'fake_group-data3')
+    
+
+    @patch('volume_provider.providers.gce.ProviderGce._get_volumes')
+    def test_get_disk_name_first_disk(self, volume_list):
+        volume_list.return_value = []
+        disk_name = self.provider._get_new_disk_name(self.disk)
+        self.assertEqual(disk_name, 'fake_group-data1')
 
    

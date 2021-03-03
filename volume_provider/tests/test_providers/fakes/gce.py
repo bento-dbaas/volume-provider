@@ -55,3 +55,12 @@ FAKE_CREDENTIAL = {
         "mongodb_4_2_3":"img-fke3"
         }
     }
+
+FAKE_DISK_OBJ = namedtuple('FakeDiskObj', 'id name zone identifier vm_name group')
+FAKE_DISK = FAKE_DISK_OBJ(
+    'fake_id', 'fake_disk_name', 
+    'fake_zone', 'fake_identifier', 
+    'fake_vm_name', 'fake_group'
+)
+
+FAKE_DISK_LIST = ['fake_group-data1', 'fake_group-data2']

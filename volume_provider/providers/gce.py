@@ -57,12 +57,12 @@ class ProviderGce(ProviderBase):
 
         return [x['deviceName'] for x in all_disks]
 
-    def __get_volumes(self, zone, instance, group):
+    def _get_volumes(self, zone, instance, group):
         vol = self.get_volumes_from(group=group)
         return [self.get_device_name(x) for x in vol] 
         
-    def __get_new_disk_name(self, volume):
-        all_disks = self.__get_volumes(volume.zone, volume.vm_name, volume.group)
+    def _get_new_disk_name(self, volume):
+        all_disks = self._get_volumes(volume.zone, volume.vm_name, volume.group)
         disk_name = "data%s" % (int(all_disks[-1].split("data")[1]) + 1)\
                     if len(all_disks)\
                     else "data1"
@@ -70,7 +70,7 @@ class ProviderGce(ProviderBase):
         return "%s-%s" % (volume.group, disk_name)
     
     def _create_volume(self, volume, snapshot=None, *args, **kwargs):
-        disk_name = self.__get_new_disk_name(volume) 
+        disk_name = self._get_new_disk_name(volume) 
         
         config = {
             'name': disk_name,
@@ -203,6 +203,27 @@ class ProviderGce(ProviderBase):
 
     def _restore_snapshot(self, snapshot, volume):
         return self._create_volume(volume, snapshot=snapshot)
+    
+    def _delete_old_volume(self, volume):
+        return self.__destroy_volume(volume, snapshot_offset=1)
+    
+    def _delete_volume(self, volume):
+        self.__destroy_volume(volume)
+        self._remove_all_snapshots(volume.group)
+
+        return True
+    
+    def _remove_all_snapshots(self, group):
+        snaps = self.client.snapshots().list(
+            project=self.credential.project,
+            filter="labels.group=%s"  % group
+        ).execute().get('items', [])
+
+        for ss in snaps:
+            self.client.snapshots().delete(
+                project=self.credential.project,
+                snapshot=ss.get('name')
+            ).execute()
 
     def get_disk(self, volume):
         return self.client.disks().get(
@@ -275,25 +296,6 @@ class ProviderGce(ProviderBase):
             sleep(self.seconds_to_wait)
         
         return True
-    
-    def _delete_old_volume(self, volume):
-        return self.__destroy_volume(volume, snapshot_offset=1)
-    
-    def _delete_volume(self, volume):
-        self._remove_all_snapshots(volume.group)
-        return self.__destroy_volume(volume)
-    
-    def _remove_all_snapshots(self, group):
-        snaps = self.client.snapshots().list(
-            project=self.credential.project,
-            filter="labels.group=%s"  % group
-        ).execute().get('items', [])
-
-        for ss in snaps:
-            self.client.snapshots().delete(
-                project=self.credential.project,
-                snapshot=ss.get('name')
-            ).execute()
 
    
 class CommandsGce(CommandsBase):

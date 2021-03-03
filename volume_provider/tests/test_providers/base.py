@@ -1,13 +1,15 @@
 from unittest import TestCase
 from unittest.mock import patch
 from collections import namedtuple
-
+from copy import deepcopy
 from libcloud import security
 
 from volume_provider.providers.base import ProviderBase
 from volume_provider.providers import base
 from volume_provider.tests.test_credentials import CredentialAddFake, FakeMongoDB
+from volume_provider.providers import ProviderGce
 
+from .fakes.gce import FAKE_CREDENTIAL, FAKE_DISK
 
 ENVIRONMENT = "dev"
 ENGINE = "redis"
@@ -95,3 +97,13 @@ class TestBaseProvider(TestCase):
             self.assertIsInstance(inserted_id, str)
             self.assertNotIn(full_data, FakeMongoDB.metadata)
             self.assertEqual(FakeMongoDB.ids[-1], latest)
+
+class GCPBaseTestCase(TestCase):
+    def setUp(self):
+        self.provider = ProviderGce(ENVIRONMENT, ENGINE)
+        self.disk = FAKE_DISK
+
+    def build_credential_content(self, content, **kwargs):
+        values = deepcopy(FAKE_CREDENTIAL)
+        values.update(kwargs)
+        content.return_value = values
