@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/bento-dbaas/volume-provider.svg?branch=master)](https://travis-ci.org/bento-dbaas/volume-provider)[![Coverage Status](https://coveralls.io/repos/github/bento-dbaas/volume-provider/badge.svg?branch=master)](https://coveralls.io/github/bento-dbaas/volume-provider?branch=master)
+[![Build Status](https://travis-ci.org/bento-dbaas/volume-provider.svg?branch=master)](https://travis-ci.org/bento-dbaas/volume-provider) [![Coverage Status](https://coveralls.io/repos/github/bento-dbaas/volume-provider/badge.svg?branch=master)](https://coveralls.io/github/bento-dbaas/volume-provider?branch=master)
 
 ## Volume Provider
 

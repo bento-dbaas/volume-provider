@@ -88,6 +88,7 @@ class ProviderGce(ProviderBase):
             zone=volume.zone,
             body=config
         ).execute()
+
         
         volume.identifier = disk_create.get('id')
         volume.resource_id = disk_name
@@ -276,7 +277,7 @@ class ProviderGce(ProviderBase):
 
         return True
 
-    def __wait_disk_create(self, volume, retry_not_found=3):
+    def __wait_disk_create(self, volume):
         while self.get_disk(volume).get('status') != "READY":
             sleep(self.seconds_to_wait)
 

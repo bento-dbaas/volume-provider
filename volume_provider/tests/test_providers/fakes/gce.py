@@ -1,4 +1,5 @@
-from collections import namedtuple
+from recordclass import recordclass
+
 
 HOST_ORIGIN_TAG = {}
 
@@ -56,11 +57,15 @@ FAKE_CREDENTIAL = {
         }
     }
 
-FAKE_DISK_OBJ = namedtuple('FakeDiskObj', 'id name zone identifier vm_name group')
+FAKE_DISK_OBJ = recordclass('FakeDiskObj', 'id name zone identifier\
+                                           vm_name group convert_kb_to_gb\
+                                           size_kb resource_id path')
 FAKE_DISK = FAKE_DISK_OBJ(
     'fake_id', 'fake_disk_name', 
     'fake_zone', 'fake_identifier', 
-    'fake_vm_name', 'fake_group'
+    'fake_vm_name', 'fake_group',
+    lambda x,to_int: x*1000, 1024,
+    '0000123', ''
 )
 
 FAKE_DISK_LIST = ['fake_group-data1', 'fake_group-data2']

@@ -69,3 +69,20 @@ class CreateVolumeTestCase(GCPBaseTestCase):
         self.assertEqual(disk_name, 'fake_group-data1')
 
    
+    @patch('volume_provider.providers.gce.ProviderGce.get_disk')
+    @patch('volume_provider.providers.gce.ProviderGce.build_client')
+    @patch('volume_provider.providers.gce.CredentialGce.get_content',
+       new=MagicMock(return_value=FAKE_CREDENTIAL))
+    @patch('volume_provider.providers.gce.ProviderGce._get_new_disk_name',
+       new=MagicMock(return_value='fake_group-disk2'))
+    def test_create_disk_flow(self, client_mock, get_disk_mock):
+        disk_insert = client_mock().disks().insert().execute
+        get_disk_mock.return_value = {'status': 'READY'}
+        disk_insert.return_value = {'id': 'disk_id123'}
+
+        created = self.provider._create_volume(self.disk)
+        self.assertTrue(disk_insert.called)
+        self.assertTrue(created)
+        self.assertEqual(self.disk.path, '/dev/disk/by-id/google-disk2')
+        self.assertEqual(self.disk.resource_id, 'fake_group-disk2')
+        self.assertEqual(self.disk.identifier, disk_insert.return_value['id'])
