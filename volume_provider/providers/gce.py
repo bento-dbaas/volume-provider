@@ -127,11 +127,11 @@ class ProviderGce(ProviderBase):
         except HttpError:
             pass
         
-        return
+        return True
     
     def _resize(self, volume, new_size_kb):
         if new_size_kb <= volume.size_kb:
-            raise Exception("New size must be greater than current size")
+            raise EnvironmentError("New size must be greater than current size")
 
         config = {
             "sizeGb": volume.convert_kb_to_gb(new_size_kb, to_int=True)
@@ -143,7 +143,8 @@ class ProviderGce(ProviderBase):
             body=config
         ).execute()
 
-        return
+        return True
+
     def __verify_none(self, dict_var, key, var):
         if var:
             dict_var[key] = var

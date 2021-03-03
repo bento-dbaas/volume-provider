@@ -61,10 +61,10 @@ FAKE_DISK_OBJ = recordclass('FakeDiskObj', 'id name zone identifier\
                                            vm_name group convert_kb_to_gb\
                                            size_kb resource_id path')
 FAKE_DISK = FAKE_DISK_OBJ(
-    'fake_id', 'fake_disk_name', 
+    '507f191e810c19729de860ea', 'fake_disk_name', 
     'fake_zone', 'fake_identifier', 
     'fake_vm_name', 'fake_group',
-    lambda x,to_int: x*1000, 1024,
+    lambda x,to_int: x/1000/1000, 1024,
     '0000123', ''
 )
 
