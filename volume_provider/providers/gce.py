@@ -57,12 +57,12 @@ class ProviderGce(ProviderBase):
 
         return [x['deviceName'] for x in all_disks]
 
-    def __get_volumes(self, zone, instance, group):
+    def _get_volumes(self, zone, instance, group):
         vol = self.get_volumes_from(group=group)
         return [self.get_device_name(x) for x in vol]
 
-    def __get_new_disk_name(self, volume):
-        all_disks = self.__get_volumes(volume.zone, volume.vm_name, volume.group)
+    def _get_new_disk_name(self, volume):
+        all_disks = self._get_volumes(volume.zone, volume.vm_name, volume.group)
         disk_name = "data%s" % (int(all_disks[-1].split("data")[1]) + 1)\
                     if len(all_disks)\
                     else "data1"
@@ -70,7 +70,7 @@ class ProviderGce(ProviderBase):
         return "%s-%s" % (volume.group, disk_name)
 
     def _create_volume(self, volume, snapshot=None, *args, **kwargs):
-        disk_name = self.__get_new_disk_name(volume)
+        disk_name = self._get_new_disk_name(volume)
 
         config = {
             'name': disk_name,
@@ -116,11 +116,11 @@ class ProviderGce(ProviderBase):
         except HttpError:
             pass
 
-        return
+        return True
 
     def _resize(self, volume, new_size_kb):
         if new_size_kb <= volume.size_kb:
-            raise Exception("New size must be greater than current size")
+            raise EnvironmentError("New size must be greater than current size")
 
         config = {
             "sizeGb": volume.convert_kb_to_gb(new_size_kb, to_int=True)
@@ -132,9 +132,10 @@ class ProviderGce(ProviderBase):
             body=config
         ).execute()
 
-        return
+        return True
+
     def __verify_none(self, dict_var, key, var):
-        if var:
+        if var and key:
             dict_var[key] = var
 
     def __get_snapshot_name(self, volume):
@@ -152,7 +153,7 @@ class ProviderGce(ProviderBase):
         self.__verify_none(ex_metadata, 'engine', engine)
         self.__verify_none(ex_metadata, 'db_name', db_name)
         self.__verify_none(ex_metadata, 'team', team)
-        self.__verify_none(ex_metadata, TAG_BACKUP_DBAAS.lower(), 1)
+        self.__verify_none(ex_metadata, TAG_BACKUP_DBAAS.lower() if TAG_BACKUP_DBAAS else None, 1)
 
         ex_metadata['group'] = volume.group
 
@@ -193,6 +194,27 @@ class ProviderGce(ProviderBase):
 
     def _restore_snapshot(self, snapshot, volume):
         return self._create_volume(volume, snapshot=snapshot)
+
+    def _delete_old_volume(self, volume):
+        return self.__destroy_volume(volume, snapshot_offset=1)
+
+    def _delete_volume(self, volume):
+        self.__destroy_volume(volume)
+        self._remove_all_snapshots(volume.group)
+
+        return True
+
+    def _remove_all_snapshots(self, group):
+        snaps = self.client.snapshots().list(
+            project=self.credential.project,
+            filter="labels.group=%s"  % group
+        ).execute().get('items', [])
+
+        for ss in snaps:
+            self.client.snapshots().delete(
+                project=self.credential.project,
+                snapshot=ss.get('name')
+            ).execute()
 
     def get_disk(self, volume):
         return self.client.disks().get(
@@ -258,7 +280,7 @@ class ProviderGce(ProviderBase):
 
         return True
 
-    def __wait_disk_create(self, volume, retry_not_found=3):
+    def __wait_disk_create(self, volume):
         while self.get_disk(volume).get('status') != "READY":
             sleep(self.seconds_to_wait)
 

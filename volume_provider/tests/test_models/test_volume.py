@@ -45,3 +45,9 @@ class PropertiesTestCase(TestCase):
         vol = Volume(**self.volume_dct)
         vol.save()
         self.assertEqual(type(vol.pk), bson.objectid.ObjectId)
+    
+    def test_kb_to_gb(self):
+        vol = Volume(**self.volume_dct)
+        vol.size_kb = 892014234
+
+        self.assertEqual(vol.convert_kb_to_gb(vol.size_kb), 851)
