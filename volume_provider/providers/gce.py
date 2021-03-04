@@ -255,6 +255,7 @@ class ProviderGce(ProviderBase):
         return self.__wait_disk_attach(volume)
 
     def _detach_disk(self, volume):
+        '''
         try:
             self.client.instances().detachDisk(
                     project=self.credential.project,
@@ -266,6 +267,14 @@ class ProviderGce(ProviderBase):
             pass
         else:
             self.__wait_disk_detach(volume)
+        '''
+        self.client.instances().detachDisk(
+                project=self.credential.project,
+                zone=volume.zone,
+                instance=volume.vm_name,
+                deviceName=self.get_device_name(volume.resource_id)
+        ).execute()
+        self.__wait_disk_detach(volume)
 
     def __wait_instance_status(self, volume, status):
         while self.get_instance_status(volume) != status:
