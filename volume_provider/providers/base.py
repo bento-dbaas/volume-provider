@@ -70,7 +70,7 @@ class ProviderBase(BasicProvider):
     def get_credential_add(self):
         raise NotImplementedError
 
-    def create_volume(self, group, size_kb, to_address, 
+    def create_volume(self, group, size_kb, to_address,
                       snapshot_id=None, zone=None, vm_name=None):
         snapshot = None
         if snapshot_id:
@@ -97,6 +97,13 @@ class ProviderBase(BasicProvider):
 
     def _delete_volume(self, volume):
         raise NotImplementedError
+
+    def detach_disk(self, identifier):
+        volume = self.load_volume(identifier)
+        self._detach_disk(volume)
+
+    def _detach_disk(self, volume):
+        pass
 
     def get_volume(self, identifier_or_path):
         try:
@@ -169,27 +176,27 @@ class ProviderBase(BasicProvider):
 
     def _restore_snapshot(self, snapshot, volume):
         raise NotImplementedError
-    
+
     def delete_old_volume(self, identifier):
         volume = self.load_volume(identifier)
         self._delete_old_volume(volume)
         volume.delete()
-    
+
     def _delete_old_volume(self, volume):
         pass
-    
+
     def get_volumes_from(self, **kwargs):
         return Volume.objects.filter(**kwargs).values_list('resource_id')
-    
+
     def get_snapshots_from(self,offset=0, **kwargs):
         snaps = Snapshot.objects.filter(**kwargs)
         if not snaps: return []
         snaps = list(snaps)
         if offset:
             return snaps[:-offset]
-        
+
         return snaps
-    
+
 class CommandsBase(BasicProvider):
 
     def __init__(self, data_directory="/data"):
@@ -212,7 +219,7 @@ die_if_error()
 
     def mount(self, identifier, fstab=True, host_vm=None, host_zone=None):
         volume = self.load_volume(identifier)
-        return self._mount(volume, 
+        return self._mount(volume,
                            fstab=fstab,
                            host_vm=host_vm,
                            host_zone=host_zone)

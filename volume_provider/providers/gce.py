@@ -26,7 +26,7 @@ class ProviderGce(ProviderBase):
     @classmethod
     def get_provider(cls):
         return 'gce'
-    
+
     def build_client(self):
         service_account_data = self.credential.content['service_account']
         service_account_data['private_key'] = service_account_data[
@@ -47,7 +47,7 @@ class ProviderGce(ProviderBase):
 
     def get_credential_add(self):
         return CredentialAddGce
-    
+
     def __get_instance_disks(self, zone, vm_name):
         all_disks = self.client.instances().get(
                         project=self.credential.project,
@@ -59,19 +59,19 @@ class ProviderGce(ProviderBase):
 
     def __get_volumes(self, zone, instance, group):
         vol = self.get_volumes_from(group=group)
-        return [self.get_device_name(x) for x in vol] 
-        
+        return [self.get_device_name(x) for x in vol]
+
     def __get_new_disk_name(self, volume):
         all_disks = self.__get_volumes(volume.zone, volume.vm_name, volume.group)
         disk_name = "data%s" % (int(all_disks[-1].split("data")[1]) + 1)\
                     if len(all_disks)\
                     else "data1"
-                
+
         return "%s-%s" % (volume.group, disk_name)
-    
+
     def _create_volume(self, volume, snapshot=None, *args, **kwargs):
-        disk_name = self.__get_new_disk_name(volume) 
-        
+        disk_name = self.__get_new_disk_name(volume)
+
         config = {
             'name': disk_name,
             'sizeGb': volume.convert_kb_to_gb(volume.size_kb, to_int=True),
@@ -88,35 +88,25 @@ class ProviderGce(ProviderBase):
             zone=volume.zone,
             body=config
         ).execute()
-        
+
         volume.identifier = disk_create.get('id')
         volume.resource_id = disk_name
         volume.path = "/dev/disk/by-id/google-%s" % self.get_device_name(disk_name)
 
         return self.__wait_disk_create(volume)
-    
+
     def _add_access(self, volume, to_address, *args, **kwargs):
         pass
 
     def __destroy_volume(self, volume, snapshot_offset=0):
-        try:
-            self.client.instances().detachDisk(
-                    project=self.credential.project,
-                    zone=volume.zone,
-                    instance=volume.vm_name,
-                    deviceName=self.get_device_name(volume.resource_id)
-            ).execute()
-        except HttpError:
-            pass
-        else:
-            self.__wait_disk_detach(volume)
+
+        self._detach_disk(volume)
 
         snapshots = self.get_snapshots_from(offset=snapshot_offset,**{'volume': volume})
         for snap in snapshots:
             self._remove_snapshot(snap)
             snap.delete()
-        
-        
+
         try:
             self.client.disks().delete(
                 project=self.credential.project,
@@ -125,9 +115,9 @@ class ProviderGce(ProviderBase):
             ).execute()
         except HttpError:
             pass
-        
+
         return
-    
+
     def _resize(self, volume, new_size_kb):
         if new_size_kb <= volume.size_kb:
             raise Exception("New size must be greater than current size")
@@ -165,7 +155,7 @@ class ProviderGce(ProviderBase):
         self.__verify_none(ex_metadata, TAG_BACKUP_DBAAS.lower(), 1)
 
         ex_metadata['group'] = volume.group
-        
+
         config = {
             'labels': ex_metadata,
             'name': snapshot_name
@@ -183,13 +173,13 @@ class ProviderGce(ProviderBase):
         snapshot.description = snapshot_name
 
         return self.__wait_snapshot_status(snapshot, 'READY')
-    
+
     def _get_snapshot_status(self, snapshot):
         return self.client.snapshots().get(
             project=self.credential.project,
             snapshot=snapshot.description
         ).execute().get('status')
-                
+
     def _remove_snapshot(self, snapshot, *args, **kwrgs):
         try:
             self.client.snapshots().delete(
@@ -198,7 +188,7 @@ class ProviderGce(ProviderBase):
             ).execute()
         except Exception as ex:
             print('Error when delete snapshot', ex)
-    
+
         return True
 
     def _restore_snapshot(self, snapshot, volume):
@@ -210,22 +200,22 @@ class ProviderGce(ProviderBase):
             zone=volume.zone,
             disk=volume.resource_id
         ).execute()
-    
+
     def get_instance_status(self, volume):
         instance = self.client.instances().get(
             project=self.credential.project,
             zone=volume.zone,
             instance=volume.vm_name
-        ).execute() 
+        ).execute()
 
         return instance.get('status')
 
     def get_device_name(self, disk_name):
         return disk_name.rsplit("-", 1)[1]
-    
+
     def attach_disk(self, volume):
         disk = self.get_disk(volume)
-        
+
         config = {
             "source": disk.get('selfLink'),
             "deviceName": self.get_device_name(volume.resource_id),
@@ -241,13 +231,26 @@ class ProviderGce(ProviderBase):
             ).execute()
 
         return self.__wait_disk_attach(volume)
-    
+
+    def _detach_disk(self, volume):
+        try:
+            self.client.instances().detachDisk(
+                    project=self.credential.project,
+                    zone=volume.zone,
+                    instance=volume.vm_name,
+                    deviceName=self.get_device_name(volume.resource_id)
+            ).execute()
+        except HttpError:
+            pass
+        else:
+            self.__wait_disk_detach(volume)
+
     def __wait_instance_status(self, volume, status):
         while self.get_instance_status(volume) != status:
             sleep(self.seconds_to_wait)
 
         return True
-    
+
     def __wait_disk_detach(self, volume):
         while self.get_device_name(volume.resource_id) in\
          self.__get_instance_disks(volume.zone, volume.vm_name):
@@ -260,7 +263,7 @@ class ProviderGce(ProviderBase):
             sleep(self.seconds_to_wait)
 
         return True
-    
+
     def __wait_disk_attach(self, volume):
         attach = False
         while not attach:
@@ -269,20 +272,20 @@ class ProviderGce(ProviderBase):
                 sleep(self.seconds_to_wait)
             else:
                 attach = True
-    
+
     def __wait_snapshot_status(self, snapshot, status):
         while self._get_snapshot_status(snapshot) != status:
             sleep(self.seconds_to_wait)
-        
+
         return True
-    
+
     def _delete_old_volume(self, volume):
         return self.__destroy_volume(volume, snapshot_offset=1)
-    
+
     def _delete_volume(self, volume):
         self._remove_all_snapshots(volume.group)
         return self.__destroy_volume(volume)
-    
+
     def _remove_all_snapshots(self, group):
         snaps = self.client.snapshots().list(
             project=self.credential.project,
@@ -295,15 +298,15 @@ class ProviderGce(ProviderBase):
                 snapshot=ss.get('name')
             ).execute()
 
-   
+
 class CommandsGce(CommandsBase):
 
     def __init__(self, provider):
         self.provider = provider
-    
-    def _mount(self, volume, fstab=True, 
+
+    def _mount(self, volume, fstab=True,
                host_vm=None, host_zone=None, *args, **kwargs):
-        
+
         volume.vm_name = host_vm or volume.vm_name
         volume.zone = host_zone or volume.zone
         volume.save()
@@ -318,7 +321,7 @@ class CommandsGce(CommandsBase):
         command += """if [ "$formatted" -eq 0 ]; then  mkfs -t ext4 -F %(disk_path)s;fi"""
 
         # mount disk
-        command += " && mount %(disk_path)s %(data_directory)s" 
+        command += " && mount %(disk_path)s %(data_directory)s"
         command = command % {
             "disk_path": volume.path,
             "data_directory": self.data_directory
@@ -327,11 +330,11 @@ class CommandsGce(CommandsBase):
 
         if fstab:
             command += " && %s" % self.fstab_script(
-                                    volume.path, 
+                                    volume.path,
                                     self.data_directory)
 
         return command
-    
+
     def _umount(self, volume, data_directory=None, *args, **kw):
         return "umount %s" % data_directory
 
