@@ -140,6 +140,7 @@ def delete_volume(provider_name, env, identifier):
         return response_invalid_request(str(e))
     return response_ok()
 
+
 @app.route(
     "/<string:provider_name>/<string:env>/remove-old-volume/<string:identifier>",
     methods=['DELETE']
@@ -149,6 +150,21 @@ def delete_old_volume(provider_name, env, identifier):
     try:
         provider = build_provider(provider_name, env)
         provider.delete_old_volume(identifier)
+    except Exception as e:  # TODO What can get wrong here?
+        print_exc()  # TODO Improve log
+        return response_invalid_request(str(e))
+    return response_ok()
+
+
+@app.route(
+    "/<string:provider_name>/<string:env>/detach-disk/<string:identifier>",
+    methods=['POST']
+)
+@auth.login_required
+def detach_disk(provider_name, env, identifier):
+    try:
+        provider = build_provider(provider_name, env)
+        provider.detach_disk(identifier)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
@@ -319,8 +335,8 @@ def command_mount(provider_name, env, identifier):
     try:
         provider = build_provider(provider_name, env)
         provider.commands.data_directory = data_directory
-        command = provider.commands.mount(identifier, 
-                                          fstab=with_fstab, 
+        command = provider.commands.mount(identifier,
+                                          fstab=with_fstab,
                                           host_vm=host_vm,
                                           host_zone=host_zone)
     except Exception as e:  # TODO What can get wrong here?
