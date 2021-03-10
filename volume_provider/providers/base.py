@@ -70,13 +70,16 @@ class ProviderBase(BasicProvider):
     def get_credential_add(self):
         raise NotImplementedError
 
-    def create_volume(self, group, size_kb, to_address, snapshot_id=None):
+    def create_volume(self, group, size_kb, to_address,
+                      snapshot_id=None, zone=None, vm_name=None):
         snapshot = None
         if snapshot_id:
             snapshot = Snapshot.objects(identifier=snapshot_id).get()
         volume = Volume()
         volume.size_kb = size_kb
         volume.set_group(group)
+        volume.zone = zone
+        volume.vm_name = vm_name
         volume.owner_address = to_address
         self._create_volume(volume, snapshot=snapshot)
         self._add_access(volume, volume.owner_address)
@@ -84,7 +87,7 @@ class ProviderBase(BasicProvider):
 
         return volume
 
-    def _create_volume(self, volume, snapshot=None):
+    def _create_volume(self, volume, snapshot=None, *args, **kwargs):
         raise NotImplementedError
 
     def delete_volume(self, identifier):
@@ -94,6 +97,13 @@ class ProviderBase(BasicProvider):
 
     def _delete_volume(self, volume):
         raise NotImplementedError
+
+    def detach_disk(self, identifier):
+        volume = self.load_volume(identifier)
+        self._detach_disk(volume)
+
+    def _detach_disk(self, volume):
+        pass
 
     def get_volume(self, identifier_or_path):
         try:
@@ -109,7 +119,7 @@ class ProviderBase(BasicProvider):
         volume = self.load_volume(identifier)
         self._add_access(volume, to_address, access_type)
 
-    def _add_access(self, volume, to_address):
+    def _add_access(self, volume, to_address, *args, **kwargs):
         raise NotImplementedError
 
     def remove_access(self, identifier, to_address):
@@ -158,6 +168,8 @@ class ProviderBase(BasicProvider):
         volume.size_kb = snapshot.volume.size_kb
         volume.set_group(snapshot.volume.group)
         volume.owner_address = snapshot.volume.owner_address
+        volume.vm_name = snapshot.volume.vm_name
+        volume.zone = snapshot.volume.zone
         self._restore_snapshot(snapshot, volume)
         volume.save()
         return volume
@@ -165,6 +177,25 @@ class ProviderBase(BasicProvider):
     def _restore_snapshot(self, snapshot, volume):
         raise NotImplementedError
 
+    def delete_old_volume(self, identifier):
+        volume = self.load_volume(identifier)
+        self._delete_old_volume(volume)
+        volume.delete()
+
+    def _delete_old_volume(self, volume):
+        pass
+
+    def get_volumes_from(self, **kwargs):
+        return Volume.objects.filter(**kwargs).values_list('resource_id')
+
+    def get_snapshots_from(self,offset=0, **kwargs):
+        snaps = Snapshot.objects.filter(**kwargs)
+        if not snaps: return []
+        snaps = list(snaps)
+        if offset:
+            return snaps[:-offset]
+
+        return snaps
 
 class CommandsBase(BasicProvider):
 
@@ -186,9 +217,12 @@ die_if_error()
     def copy_files(self, *args, **kw):
         return self._copy_files(*args, **kw)
 
-    def mount(self, identifier, fstab=True):
+    def mount(self, identifier, fstab=True, host_vm=None, host_zone=None):
         volume = self.load_volume(identifier)
-        return self._mount(volume, fstab=fstab)
+        return self._mount(volume,
+                           fstab=fstab,
+                           host_vm=host_vm,
+                           host_zone=host_zone)
 
     def scp(self, identifier, source_dir, target_ip, target_dir):
         snap = Snapshot.objects(identifier=identifier).get()
@@ -254,14 +288,14 @@ rm -f /root/.ssh/dbaas.key*
 die_if_error "Error to remove public key dbaas"
 """.format(**kw)
 
-    def _mount(self, volume):
+    def _mount(self, volume, *args, **kwargs):
         raise NotImplementedError
 
     def umount(self, identifier, data_directory):
         volume = self.load_volume(identifier)
         return self._umount(volume, data_directory=data_directory)
 
-    def _umount(self, volume):
+    def _umount(self, volume, data_directory=None):
         raise NotImplementedError
 
     def clean_up(self, identifier):

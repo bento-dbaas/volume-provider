@@ -116,7 +116,7 @@ class ProviderAWS(ProviderBase):
         self.client.detach_volume(ebs, self.credential.force_detach)
         self.__waiting_be_available(volume)
 
-    def _create_volume(self, volume, snapshot=None):
+    def _create_volume(self, volume, snapshot=None, *args, **kwargs):
         node = self.__get_node(volume)
         if snapshot:
             snapshot = self.__get_snapshot(snapshot)
@@ -131,7 +131,7 @@ class ProviderAWS(ProviderBase):
         volume.resource_id = ebs.name
         volume.path = self.credential.next_device(volume.owner_address)
 
-    def _add_access(self, volume, to_address):
+    def _add_access(self, volume, to_address, *args, **kwargs):
         volume.owner_address = to_address
         volume.save()
         return
@@ -193,6 +193,9 @@ class ProviderAWS(ProviderBase):
     def _restore_snapshot(self, snapshot, volume):
         ebs_snapshot = self.__get_snapshot(snapshot)
         self._create_volume(volume, ebs_snapshot)
+    
+    def _delete_old_volume(self, volume):
+        pass
 
 class CommandsAWS(CommandsBase):
 

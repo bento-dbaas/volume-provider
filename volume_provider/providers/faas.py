@@ -64,6 +64,9 @@ class ProviderFaaS(ProviderBase):
         export = self.client.export_get(volume)
         volume.resource_id = export['resource_id']
         volume.path = job_result['full_path']
+    
+    def _delete_old_volume(self, volume):
+        pass
 
 
 class CommandsFaaS(CommandsBase):
@@ -102,7 +105,7 @@ scp -i "/root/.ssh/dbaas.key" -Crp -o StrictHostKeyChecking=no -o UserKnownHosts
 die_if_error "Error scp from {snap_dir} to {target_ip}:{target_dir}"
 """.format(**kw)
 
-    def _mount(self, volume, fstab=True):
+    def _mount(self, volume, fstab=True, *args, **kwargs):
         script = self.die_if_error_script()
         if fstab:
             script += self.fstab_script(volume.path, self.data_directory)

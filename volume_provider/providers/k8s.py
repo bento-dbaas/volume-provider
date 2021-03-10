@@ -51,7 +51,7 @@ class ProviderK8s(ProviderBase):
     def _get_snapshot_status(self, snapshot):
         return 'available'
 
-    def _create_volume(self, volume, snapshot=None):
+    def _create_volume(self, volume, snapshot=None, *args, **kwargs):
         volume.owner_address = ''
         volume.identifier = generate_random_uuid()
         volume.resource_id = volume.identifier
@@ -102,9 +102,11 @@ class ProviderK8s(ProviderBase):
         volume.resource_id = export['resource_id']
         volume.path = job_result['full_path']
 
-    def _add_access(self, volume, to_address):
+    def _add_access(self, volume, to_address, *args, **kwargs):
         pass
 
-
+    def _delete_old_volume(self, volume):
+        pass
+    
 class CommandsK8s(CommandsBase):
     pass

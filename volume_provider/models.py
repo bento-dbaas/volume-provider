@@ -1,5 +1,5 @@
 from mongoengine import (Document, StringField, IntField, ReferenceField,
-                         CASCADE)
+                         CASCADE, DictField)
 
 
 class Volume(Document):
@@ -9,7 +9,8 @@ class Volume(Document):
     identifier = StringField(required=True)
     path = StringField(max_length=1000, required=True)
     owner_address = StringField(max_length=20, required=True)
-
+    zone = StringField(max_length=200, required=False)
+    vm_name = StringField(max_length=200, required=False)
     def set_group(self, group):
         self.group = group
         pair = Volume.objects(group=group).first()
@@ -35,8 +36,9 @@ class Volume(Document):
     def pairs(self):
         return Volume.objects(group=self.group).all()
 
-    def convert_kb_to_gb(self, size_kb):
-        return round((float(size_kb)/1024.0)/1024.0)
+    def convert_kb_to_gb(self, size_kb, to_int=False):
+        gb_size = round((float(size_kb)/1024.0)/1024.0)
+        return int(gb_size) if to_int else gb_size
 
     @property
     def size_gb(self):
@@ -51,6 +53,7 @@ class Snapshot(Document):
     volume = ReferenceField(Volume, required=True, reverse_delete_rule=CASCADE)
     identifier = StringField(required=True, max_length=255)
     description = StringField(required=True, max_length=255)
+    labels = DictField(required=False)
 
     @property
     def uuid(self):
