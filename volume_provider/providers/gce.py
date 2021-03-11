@@ -107,14 +107,11 @@ class ProviderGce(ProviderBase):
             self._remove_snapshot(snap)
             snap.delete()
 
-        try:
-            self.client.disks().delete(
-                project=self.credential.project,
-                zone=volume.zone,
-                disk=volume.resource_id
-            ).execute()
-        except HttpError:
-            pass
+        self.client.disks().delete(
+            project=self.credential.project,
+            zone=volume.zone,
+            disk=volume.resource_id
+        ).execute()
 
         return True
 
