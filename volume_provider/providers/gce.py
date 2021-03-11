@@ -248,8 +248,14 @@ class ProviderGce(ProviderBase):
         return True
 
     def __wait_disk_detach(self, volume):
-        while self.get_device_name(volume.resource_id) in\
+        '''while self.get_device_name(volume.resource_id) in\
          self.__get_instance_disks(volume.zone, volume.vm_name):
+            sleep(self.seconds_to_wait)'''
+        while self.client.disks().get(
+            project = self.credential.project,
+            zone=volume.zone,
+            disk=volume.resource_id
+        ).execute().get("users"):
             sleep(self.seconds_to_wait)
 
         return True
