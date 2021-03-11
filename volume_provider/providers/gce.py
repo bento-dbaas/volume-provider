@@ -192,21 +192,6 @@ class ProviderGce(ProviderBase):
     def _restore_snapshot(self, snapshot, volume):
         return self._create_volume(volume, snapshot=snapshot)
 
-    def _delete_old_volume(self, volume):
-        return self.__destroy_volume(volume, snapshot_offset=1)
-
-    def _remove_all_snapshots(self, group):
-        snaps = self.client.snapshots().list(
-            project=self.credential.project,
-            filter="labels.group=%s"  % group
-        ).execute().get('items', [])
-
-        for ss in snaps:
-            self.client.snapshots().delete(
-                project=self.credential.project,
-                snapshot=ss.get('name')
-            ).execute()
-
     def get_disk(self, volume):
         return self.client.disks().get(
             project=self.credential.project,
