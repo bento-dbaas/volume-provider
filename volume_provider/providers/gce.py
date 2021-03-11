@@ -198,12 +198,6 @@ class ProviderGce(ProviderBase):
     def _delete_old_volume(self, volume):
         return self.__destroy_volume(volume, snapshot_offset=1)
 
-    def _delete_volume(self, volume):
-        self.__destroy_volume(volume)
-        self._remove_all_snapshots(volume.group)
-
-        return True
-
     def _remove_all_snapshots(self, group):
         snaps = self.client.snapshots().list(
             project=self.credential.project,
