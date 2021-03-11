@@ -102,10 +102,12 @@ class ProviderGce(ProviderBase):
 
         self._detach_disk(volume)
 
+        '''
         snapshots = self.get_snapshots_from(offset=snapshot_offset,**{'volume': volume})
         for snap in snapshots:
             self._remove_snapshot(snap)
             snap.delete()
+        '''
 
         self.client.disks().delete(
             project=self.credential.project,
@@ -277,7 +279,7 @@ class ProviderGce(ProviderBase):
         return self.__destroy_volume(volume, snapshot_offset=1)
 
     def _delete_volume(self, volume):
-        self._remove_all_snapshots(volume.group)
+        #self._remove_all_snapshots(volume.group)
         return self.__destroy_volume(volume)
 
     def _remove_all_snapshots(self, group):
