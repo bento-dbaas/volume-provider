@@ -125,7 +125,6 @@ class CreateVolumeTestCase(GCPBaseTestCase):
         self.assertTrue(disk_delete.called_once)
         self.assertTrue(disk_detach.called_once)
         self.assertTrue(snapshots_list.called_once)
-        self.assertTrue(snapshots_delete.called)
         self.assertTrue(deleted)
     
     @patch('volume_provider.providers.gce.ProviderGce.build_client')
