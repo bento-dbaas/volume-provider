@@ -16,6 +16,7 @@ from volume_provider.credentials.gce import CredentialGce, CredentialAddGce
 from volume_provider.providers.base import ProviderBase, CommandsBase
 from volume_provider.clients.team import TeamClient
 
+
 class ProviderGce(ProviderBase):
 
     seconds_to_wait = 3
@@ -62,7 +63,11 @@ class ProviderGce(ProviderBase):
         return [self.get_device_name(x) for x in vol]
 
     def _get_new_disk_name(self, volume):
-        all_disks = self._get_volumes(volume.zone, volume.vm_name, volume.group)
+        all_disks = self._get_volumes(
+            volume.zone,
+            volume.vm_name,
+            volume.group
+        )
         disk_name = "data%s" % (int(all_disks[-1].split("data")[1]) + 1)\
                     if len(all_disks)\
                     else "data1"
@@ -81,7 +86,8 @@ class ProviderGce(ProviderBase):
         }
 
         if snapshot:
-            config['sourceSnapshot'] = "global/snapshots/%s" % (snapshot.description)
+            config['sourceSnapshot'] = "global/snapshots/%s" % \
+                (snapshot.description)
 
         disk_create = self.client.disks().insert(
             project=self.credential.project,
@@ -91,7 +97,8 @@ class ProviderGce(ProviderBase):
 
         volume.identifier = disk_create.get('id')
         volume.resource_id = disk_name
-        volume.path = "/dev/disk/by-id/google-%s" % self.get_device_name(disk_name)
+        volume.path = "/dev/disk/by-id/google-%s" % \
+            self.get_device_name(disk_name)
 
         return self.__wait_disk_create(volume)
 
@@ -103,7 +110,9 @@ class ProviderGce(ProviderBase):
         self._detach_disk(volume)
 
         '''
-        snapshots = self.get_snapshots_from(offset=snapshot_offset,**{'volume': volume})
+        snapshots = self.get_snapshots_from(
+            offset=snapshot_offset,**{'volume': volume}
+        )
         for snap in snapshots:
             self._remove_snapshot(snap)
             snap.delete()
@@ -119,7 +128,9 @@ class ProviderGce(ProviderBase):
 
     def _resize(self, volume, new_size_kb):
         if new_size_kb <= volume.size_kb:
-            raise EnvironmentError("New size must be greater than current size")
+            raise EnvironmentError(
+                "New size must be greater than current size"
+            )
 
         config = {
             "sizeGb": volume.convert_kb_to_gb(new_size_kb, to_int=True)
@@ -139,7 +150,7 @@ class ProviderGce(ProviderBase):
 
     def __get_snapshot_name(self, volume):
         return "ss-%(volume_name)s-%(timestamp)s" % {
-            'volume_name': volume.resource_id.replace('-',''),
+            'volume_name': volume.resource_id.replace('-', ''),
             'timestamp': datetime.now().strftime('%Y%m%d%H%M%S%f')
         }
 
@@ -152,7 +163,11 @@ class ProviderGce(ProviderBase):
         self.__verify_none(ex_metadata, 'engine', engine)
         self.__verify_none(ex_metadata, 'db_name', db_name)
         self.__verify_none(ex_metadata, 'team', team)
-        self.__verify_none(ex_metadata, TAG_BACKUP_DBAAS.lower() if TAG_BACKUP_DBAAS else None, 1)
+        self.__verify_none(
+            ex_metadata,
+            TAG_BACKUP_DBAAS.lower() if TAG_BACKUP_DBAAS else None,
+            1
+        )
 
         ex_metadata['group'] = volume.group
 
@@ -242,7 +257,7 @@ class ProviderGce(ProviderBase):
                 deviceName=self.get_device_name(volume.resource_id)
         ).execute()
         self.__wait_disk_detach(volume)
-    
+
     def _move_volume(self, volume, zone):
         config = {
             "targetDisk": "zones/%(zone)s/disks/%(disk_name)s" % {
@@ -284,7 +299,7 @@ class ProviderGce(ProviderBase):
                 else:
                     raise(ex)
             sleep(self.seconds_to_wait)
-        
+
         while True:
             try:
                 disk = disk_next.execute()
@@ -309,7 +324,7 @@ class ProviderGce(ProviderBase):
          self.__get_instance_disks(volume.zone, volume.vm_name):
             sleep(self.seconds_to_wait)'''
         while self.client.disks().get(
-            project = self.credential.project,
+            project=self.credential.project,
             zone=volume.zone,
             disk=volume.resource_id
         ).execute().get("users"):
@@ -318,7 +333,10 @@ class ProviderGce(ProviderBase):
         return True
 
     def __wait_disk_create(self, volume):
-        while self.get_disk(volume.resource_id, volume.zone).get('status') != "READY":
+        while self.get_disk(
+            volume.resource_id,
+            volume.zone
+        ).get('status') != "READY":
             sleep(self.seconds_to_wait)
 
         return True
@@ -342,13 +360,13 @@ class ProviderGce(ProviderBase):
         return self.__destroy_volume(volume, snapshot_offset=1)
 
     def _delete_volume(self, volume):
-        #self._remove_all_snapshots(volume.group)
+        # self._remove_all_snapshots(volume.group)
         return self.__destroy_volume(volume)
 
     def _remove_all_snapshots(self, group):
         snaps = self.client.snapshots().list(
             project=self.credential.project,
-            filter="labels.group=%s"  % group
+            filter="labels.group=%s" % group
         ).execute().get('items', [])
 
         for ss in snaps:
@@ -373,11 +391,14 @@ class CommandsGce(CommandsBase):
         self.provider.attach_disk(volume)
 
         # waiting symlink creation
-        command = """while ! [[ -L "%(disk_path)s" ]];do echo "waiting symlink" && sleep 3; done"""
+        command = """while ! [[ -L "%(disk_path)s" ]];\
+            do echo "waiting symlink" && sleep 3; done"""
 
         # verify if volume is ex4 and create a fs
-        command += """ && formatted=$(blkid -o value -s TYPE %(disk_path)s | grep ext4 | wc -l);"""
-        command += """if [ "$formatted" -eq 0 ]; then  mkfs -t ext4 -F %(disk_path)s;fi"""
+        command += """ && formatted=$(blkid -o value -s TYPE %(disk_path)s \
+            | grep ext4 | wc -l);"""
+        command += """if [ "$formatted" -eq 0 ]; \
+            then  mkfs -t ext4 -F %(disk_path)s;fi"""
 
         # mount disk
         command += " && mount %(disk_path)s %(data_directory)s"
@@ -385,7 +406,6 @@ class CommandsGce(CommandsBase):
             "disk_path": volume.path,
             "data_directory": self.data_directory
         }
-
 
         if fstab:
             command += " && %s" % self.fstab_script(
@@ -399,6 +419,8 @@ class CommandsGce(CommandsBase):
 
     def fstab_script(self, filer_path, mount_path):
         command = "cp /etc/fstab /etc/fstab.bkp"
-        command += " && sed \'/\{mount_path}/d\' /etc/fstab.bkp > /etc/fstab"
-        command += ' && echo "{filer_path}  {mount_path}    ext4 defaults    0   0" >> /etc/fstab'
+        command += """ && sed \'/\{mount_path}/d\' \
+             /etc/fstab.bkp > /etc/fstab"""
+        command += ' && echo "{filer_path}  {mount_path}  \
+              ext4 defaults    0   0" >> /etc/fstab'
         return command.format(mount_path=mount_path, filer_path=filer_path)

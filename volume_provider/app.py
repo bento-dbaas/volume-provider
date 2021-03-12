@@ -113,7 +113,6 @@ def create_volume(provider_name, env):
     group = data.get("group", None)
     size_kb = data.get("size_kb", None)
 
-
     if not(group and size_kb):
         return response_invalid_request("Invalid data {}".format(data))
 

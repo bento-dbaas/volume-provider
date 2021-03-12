@@ -101,7 +101,7 @@ class ProviderBase(BasicProvider):
     def move_volume(self, identifier, zone):
         volume = self.load_volume(identifier)
         self._move_volume(volume, zone)
-        
+
         volume.zone = zone
         volume.save()
         return volume
@@ -122,7 +122,10 @@ class ProviderBase(BasicProvider):
         except Volume.DoesNotExist:
             pass
         try:
-            return self.load_volume(identifier_or_path, search_field="path__icontains")
+            return self.load_volume(
+                identifier_or_path,
+                search_field="path__icontains"
+            )
         except Volume.DoesNotExist:
             return None
 
@@ -152,6 +155,9 @@ class ProviderBase(BasicProvider):
     def get_snapshot_status(self, identifier):
         snap = Snapshot.objects(identifier=identifier).get()
         return self._get_snapshot_status(snap)
+
+    def _get_snapshot_status(self, identifier):
+        raise NotImplementedError
 
     def take_snapshot(self, identifier, team, engine, db_name):
         volume = self.load_volume(identifier)
@@ -199,14 +205,16 @@ class ProviderBase(BasicProvider):
     def get_volumes_from(self, **kwargs):
         return Volume.objects.filter(**kwargs).values_list('resource_id')
 
-    def get_snapshots_from(self,offset=0, **kwargs):
+    def get_snapshots_from(self, offset=0, **kwargs):
         snaps = Snapshot.objects.filter(**kwargs)
-        if not snaps: return []
+        if not snaps:
+            return []
         snaps = list(snaps)
         if offset:
             return snaps[:-offset]
 
         return snaps
+
 
 class CommandsBase(BasicProvider):
 
@@ -314,4 +322,7 @@ die_if_error "Error to remove public key dbaas"
         return self._clean_up(volume)
 
     def _clean_up(self, volume):
+        raise NotImplementedError
+
+    def _copy_files(self, *args, **kwargs):
         raise NotImplementedError
