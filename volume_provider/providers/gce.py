@@ -194,12 +194,14 @@ class ProviderGce(ProviderBase):
     def _restore_snapshot(self, snapshot, volume):
         return self._create_volume(volume, snapshot=snapshot)
 
-    def get_disk(self, volume):
-        return self.client.disks().get(
+    def get_disk(self, name, zone, execute_request=True):
+        req = self.client.disks().get(
             project=self.credential.project,
-            zone=volume.zone,
-            disk=volume.resource_id
-        ).execute()
+            zone=zone,
+            disk=name
+        )
+
+        return req if not execute_request else req.execute()
 
     def get_instance_status(self, volume):
         instance = self.client.instances().get(
@@ -214,7 +216,7 @@ class ProviderGce(ProviderBase):
         return disk_name.rsplit("-", 1)[1]
 
     def attach_disk(self, volume):
-        disk = self.get_disk(volume)
+        disk = self.get_disk(volume.resource_id, volume.zone)
 
         config = {
             "source": disk.get('selfLink'),
@@ -240,6 +242,61 @@ class ProviderGce(ProviderBase):
                 deviceName=self.get_device_name(volume.resource_id)
         ).execute()
         self.__wait_disk_detach(volume)
+    
+    def _move_volume(self, volume, zone):
+        config = {
+            "targetDisk": "zones/%(zone)s/disks/%(disk_name)s" % {
+                "zone": volume.zone,
+                "disk_name": volume.resource_id
+            },
+            "destinationZone": "zones/%s" % zone
+        }
+        self.client.projects().moveDisk(
+            project=self.credential.project,
+            body=config
+        ).execute()
+
+        return self.__wait_disk_move(volume, zone)
+
+    def __wait_disk_move(self, volume, zone):
+        if volume.zone == zone:
+            return True
+
+        disk_previous = self.get_disk(
+            volume.resource_id,
+            volume.zone,
+            execute_request=False
+        )
+
+        disk_next = self.get_disk(
+            volume.resource_id,
+            zone,
+            execute_request=False
+        )
+
+        # waiting for 404
+        while True:
+            try:
+                disk_previous.execute()
+            except HttpError as ex:
+                if ex.resp.status == 404:
+                    break
+                else:
+                    raise(ex)
+            sleep(self.seconds_to_wait)
+        
+        while True:
+            try:
+                disk = disk_next.execute()
+                if disk.get('status') == "READY":
+                    break
+            except HttpError as ex:
+                if ex.resp.status == 404:
+                    pass
+                else:
+                    raise Exception(ex)
+            sleep(self.seconds_to_wait)
+        return True
 
     def __wait_instance_status(self, volume, status):
         while self.get_instance_status(volume) != status:
@@ -261,7 +318,7 @@ class ProviderGce(ProviderBase):
         return True
 
     def __wait_disk_create(self, volume):
-        while self.get_disk(volume).get('status') != "READY":
+        while self.get_disk(volume.resource_id, volume.zone).get('status') != "READY":
             sleep(self.seconds_to_wait)
 
         return True
@@ -269,7 +326,7 @@ class ProviderGce(ProviderBase):
     def __wait_disk_attach(self, volume):
         attach = False
         while not attach:
-            disk = self.get_disk(volume)
+            disk = self.get_disk(volume.resource_id, volume.zone)
             if not disk.get('lastAttachTimestamp'):
                 sleep(self.seconds_to_wait)
             else:

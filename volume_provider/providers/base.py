@@ -98,6 +98,17 @@ class ProviderBase(BasicProvider):
     def _delete_volume(self, volume):
         raise NotImplementedError
 
+    def move_volume(self, identifier, zone):
+        volume = self.load_volume(identifier)
+        self._move_volume(volume, zone)
+        
+        volume.zone = zone
+        volume.save()
+        return volume
+
+    def _move_volume(self, volume, zone):
+        raise NotImplementedError
+
     def detach_disk(self, identifier):
         volume = self.load_volume(identifier)
         self._detach_disk(volume)

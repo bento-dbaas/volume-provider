@@ -170,6 +170,25 @@ def detach_disk(provider_name, env, identifier):
         return response_invalid_request(str(e))
     return response_ok()
 
+@app.route(
+    "/<string:provider_name>/<string:env>/move/<string:identifier>",
+    methods=['POST']
+)
+@auth.login_required
+def move_volume(provider_name, env, identifier):
+    data = request.get_json()
+    zone = data.get('zone')
+
+    if not zone: 
+        return response_invalid_request("Invalid zone")
+    try:
+        provider = build_provider(provider_name, env)
+        provider.move_volume(identifier, zone)
+    except Exception as e:  # TODO What can get wrong here?
+        print_exc()  # TODO Improve log
+        return response_invalid_request(str(e))
+    return response_ok()
+
 
 @app.route(
     "/<string:provider_name>/<string:env>/volume/<string:identifier_or_path>",
