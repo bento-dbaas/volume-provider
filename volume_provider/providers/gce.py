@@ -182,12 +182,6 @@ class ProviderGce(ProviderBase):
             'name': snapshot_name,
             "storageLocations": [self.credential.region]
         }
-        oerationx = self.client.disks().createSnapshot(
-            project=self.credential.project,
-            zone=volume.zone,
-            disk=volume.resource_id,
-            body=config
-        ).execute()
 
         oeration = self.client.disks().createSnapshot(
             project=self.credential.project,
