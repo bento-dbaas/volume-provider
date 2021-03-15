@@ -54,6 +54,7 @@ class Snapshot(Document):
     identifier = StringField(required=True, max_length=255)
     description = StringField(required=True, max_length=255)
     labels = DictField(required=False)
+    size_bytes = IntField(required=False)
 
     @property
     def uuid(self):
@@ -64,5 +65,6 @@ class Snapshot(Document):
             'id': self._id,
             'identifier': self.identifier,
             'path': self.description,
-            'volume': self.volume
+            'volume': self.volume,
+            'size_bytes': self.size_bytes,
         }

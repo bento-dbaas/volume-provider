@@ -288,7 +288,8 @@ def take_snapshot(provider_name, env, identifier):
     return response_created(
         identifier=snapshot.identifier,
         description=snapshot.description,
-        volume_path=snapshot.volume.path
+        volume_path=snapshot.volume.path,
+        size=snapshot.size_bytes
     )
 
 
