@@ -1,4 +1,5 @@
 from volume_provider.models import Volume, Snapshot
+from datetime import datetime
 
 
 class BasicProvider(object):
@@ -161,7 +162,7 @@ class ProviderBase(BasicProvider):
 
     def take_snapshot(self, identifier, team, engine, db_name):
         volume = self.load_volume(identifier)
-        snapshot = Snapshot(volume=volume)
+        snapshot = Snapshot(volume=volume, created_at=datetime.now())
         self._take_snapshot(volume, snapshot, team, engine, db_name)
         snapshot.save()
         return snapshot
