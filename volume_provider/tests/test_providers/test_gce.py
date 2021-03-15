@@ -103,11 +103,12 @@ class CreateVolumeTestCase(GCPBaseTestCase):
         new=MagicMock(return_value=FAKE_CREDENTIAL))
     @patch('volume_provider.providers.gce.ProviderGce.get_snapshots_from',
         new=MagicMock(return_value=[]))
+    @patch('volume_provider.providers.gce.ProviderGce._detach_disk',
+        new=MagicMock(return_value=True))
     def test_delete_disk(self, client_mock):
         disk_delete = client_mock().disks().delete().execute
         disk_detach = client_mock().instances().detachDisk().execute
         snapshots_list = client_mock().snapshots().list().execute
-        snapshots_delete = client_mock().snapshots().delete().execute
 
         snapshots_list.return_value = {
             'items': [
