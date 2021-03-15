@@ -259,6 +259,9 @@ class ProviderGce(ProviderBase):
         self.__wait_disk_detach(volume)
 
     def _move_volume(self, volume, zone):
+        if volume.zone == zone:
+            return True
+
         config = {
             "targetDisk": "zones/%(zone)s/disks/%(disk_name)s" % {
                 "zone": volume.zone,
@@ -274,9 +277,6 @@ class ProviderGce(ProviderBase):
         return self.__wait_disk_move(volume, zone)
 
     def __wait_disk_move(self, volume, zone):
-        if volume.zone == zone:
-            return True
-
         disk_previous = self.get_disk(
             volume.resource_id,
             volume.zone,
