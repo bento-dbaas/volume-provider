@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from os import getenv
+import logging
 
 
 MONGODB_HOST = getenv("MONGODB_HOST", "127.0.0.1")
@@ -26,3 +27,4 @@ AWS_PROXY = getenv("AWS_PROXY", None)
 TEAM_API_URL = getenv("TEAM_API_URL", None)
 
 TAG_BACKUP_DBAAS = getenv("TAG_BACKUP_DBAAS", None)
+LOGGING_LEVEL = int(getenv('LOGGING_LEVEL', logging.INFO))

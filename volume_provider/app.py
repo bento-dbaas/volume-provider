@@ -1,4 +1,5 @@
 import json
+import logging
 from traceback import print_exc
 from bson import json_util
 from flask import Flask, request, jsonify, make_response
@@ -6,7 +7,7 @@ from flask_cors import CORS
 from flask_httpauth import HTTPBasicAuth
 from mongoengine import connect
 from volume_provider.settings import APP_USERNAME, APP_PASSWORD, \
-    MONGODB_PARAMS, MONGODB_DB
+    MONGODB_PARAMS, MONGODB_DB, LOGGING_LEVEL
 from volume_provider.providers import get_provider_to
 
 
@@ -14,6 +15,7 @@ app = Flask(__name__)
 auth = HTTPBasicAuth()
 cors = CORS(app)
 connect(MONGODB_DB, **MONGODB_PARAMS)
+logging.basicConfig(level=LOGGING_LEVEL)
 
 
 @auth.verify_password
@@ -178,7 +180,7 @@ def move_volume(provider_name, env, identifier):
     data = request.get_json()
     zone = data.get('zone')
 
-    if not zone: 
+    if not zone:
         return response_invalid_request("Invalid zone")
     try:
         provider = build_provider(provider_name, env)
