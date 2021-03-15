@@ -33,7 +33,7 @@ class ProviderGce(ProviderBase):
         return 'gce'
 
     def build_client(self):
-        service_account_data = self.credential.content['service_account']
+        service_account_data = self.credential.service_account
         service_account_data['private_key'] = service_account_data[
             'private_key'
         ].replace('\\n', '\n')
@@ -172,32 +172,39 @@ class ProviderGce(ProviderBase):
             TAG_BACKUP_DBAAS.lower() if TAG_BACKUP_DBAAS else None,
             1
         )
-
         ex_metadata['group'] = volume.group
+
+        snapshot.labels = ex_metadata
+        snapshot.description = snapshot_name
 
         config = {
             'labels': ex_metadata,
-            'name': snapshot_name
+            'name': snapshot_name,
+            "storageLocations": [self.credential.region]
         }
-
-        new_snapshot = self.client.disks().createSnapshot(
+        oerationx = self.client.disks().createSnapshot(
             project=self.credential.project,
             zone=volume.zone,
             disk=volume.resource_id,
             body=config
         ).execute()
 
-        snapshot.labels = ex_metadata
-        snapshot.identifier = new_snapshot.get('id')
-        snapshot.description = snapshot_name
-
-        return self.__wait_snapshot_status(snapshot, 'READY')
-
-    def _get_snapshot_status(self, snapshot):
-        return self.client.snapshots().get(
+        oeration = self.client.disks().createSnapshot(
             project=self.credential.project,
-            snapshot=snapshot.description
-        ).execute().get('status')
+            zone=volume.zone,
+            disk=volume.resource_id,
+            body=config
+        ).execute()
+
+        oeration_wait = self._wait_zone_operation(
+            volume.zone, oeration.get('name'))
+
+        snap = self.client.snapshots().get(
+            project=self.credential.project,
+            snapshot=snapshot_name
+        ).execute()
+
+        snapshot.identifier  = snap.get('id')
 
     def _remove_snapshot(self, snapshot, *args, **kwrgs):
         try:
@@ -355,12 +362,6 @@ class ProviderGce(ProviderBase):
             else:
                 attach = True
 
-    def __wait_snapshot_status(self, snapshot, status):
-        while self._get_snapshot_status(snapshot) != status:
-            sleep(self.seconds_to_wait)
-
-        return True
-
     def _delete_old_volume(self, volume):
         return self.__destroy_volume(volume, snapshot_offset=1)
 
@@ -379,6 +380,28 @@ class ProviderGce(ProviderBase):
                 project=self.credential.project,
                 snapshot=ss.get('name')
             ).execute()
+
+    def _wait_zone_operation(self, zone, operation):
+        result = self.client.zoneOperations().wait(
+            project=self.credential.project,
+            zone=zone,
+            operation=operation
+        ).execute()
+
+        if result.get('error'):
+            error = 'Error in {} operation: {}'.format(
+                result.get('operationType'),
+                result.get('error')
+            )
+            raise Exception(error)
+
+        if result.get('status') != 'DONE':
+            error = 'Operation {} is not Done. Status: {}'.format(
+                result.get('operationType'),
+                result.get('status')
+            )
+
+        return result
 
 
 class CommandsGce(CommandsBase):
