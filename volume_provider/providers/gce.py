@@ -190,8 +190,7 @@ class ProviderGce(ProviderBase):
             body=config
         ).execute()
 
-        oeration_wait = self._wait_zone_operation(
-            volume.zone, oeration.get('name'))
+        self._wait_zone_operation(volume.zone, oeration.get('name'))
 
         snap = self.client.snapshots().get(
             project=self.credential.project,
@@ -202,15 +201,11 @@ class ProviderGce(ProviderBase):
         snapshot.size_bytes = snap.get('downloadBytes')
 
     def _remove_snapshot(self, snapshot, *args, **kwrgs):
-        try:
-            self.client.snapshots().delete(
+        oeration = self.client.snapshots().delete(
                 project=self.credential.project,
                 snapshot=snapshot.description
-            ).execute()
-        except Exception as ex:
-            msg = 'Error when delete snapshot: {}'.format(ex)
-            LOG.error(msg)
-
+        ).execute()
+        self._wait_global_operation(oeration.get('name'))
         return True
 
     def _restore_snapshot(self, snapshot, volume):
@@ -376,27 +371,36 @@ class ProviderGce(ProviderBase):
                 snapshot=ss.get('name')
             ).execute()
 
+    def _check_operation_status(self, operation):
+
+        if operation.get('error'):
+            error = 'Error in {} operation: {}'.format(
+                operation.get('operationType'),
+                operation.get('error')
+            )
+            raise Exception(error)
+
+        if operation.get('status') != 'DONE':
+            error = 'Operation {} is not Done. Status: {}'.format(
+                operation.get('operationType'),
+                operation.get('status')
+            )
+            raise Exception(error)
+
     def _wait_zone_operation(self, zone, operation):
-        result = self.client.zoneOperations().wait(
+        op = self.client.zoneOperations().wait(
             project=self.credential.project,
             zone=zone,
             operation=operation
         ).execute()
+        self._check_operation_status(op)
 
-        if result.get('error'):
-            error = 'Error in {} operation: {}'.format(
-                result.get('operationType'),
-                result.get('error')
-            )
-            raise Exception(error)
-
-        if result.get('status') != 'DONE':
-            error = 'Operation {} is not Done. Status: {}'.format(
-                result.get('operationType'),
-                result.get('status')
-            )
-
-        return result
+    def _wait_global_operation(self, operation):
+        op = self.client.globalOperations().wait(
+            project=self.credential.project,
+            operation=operation
+        ).execute()
+        self._check_operation_status(op)
 
 
 class CommandsGce(CommandsBase):
