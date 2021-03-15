@@ -1,4 +1,5 @@
 import json
+import logging
 from datetime import datetime
 from time import sleep
 
@@ -15,6 +16,9 @@ from volume_provider.settings import AWS_PROXY, TAG_BACKUP_DBAAS
 from volume_provider.credentials.gce import CredentialGce, CredentialAddGce
 from volume_provider.providers.base import ProviderBase, CommandsBase
 from volume_provider.clients.team import TeamClient
+
+
+LOG = logging.getLogger(__name__)
 
 
 class ProviderGce(ProviderBase):
@@ -202,7 +206,8 @@ class ProviderGce(ProviderBase):
                 snapshot=snapshot.description
             ).execute()
         except Exception as ex:
-            print('Error when delete snapshot', ex)
+            msg = 'Error when delete snapshot: {}'.format(ex)
+            LOG.error(msg)
 
         return True
 
