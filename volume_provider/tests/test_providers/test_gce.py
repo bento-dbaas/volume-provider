@@ -175,3 +175,31 @@ class CreateVolumeTestCase(GCPBaseTestCase):
 
         self.assertTrue(delete_snap.called)
         self.assertTrue(deleted)
+
+    @patch('volume_provider.providers.gce.ProviderGce.build_client')
+    @patch('volume_provider.providers.gce.CredentialGce.get_content',
+           new=MagicMock(return_value=FAKE_CREDENTIAL))
+    def test_move_disk(self, client_mock):
+        with patch.object(
+                ProviderGce,
+                '_ProviderGce__wait_disk_move',
+                return_value=True):
+            disk_move = client_mock().projects().moveDisk().execute
+            moved = self.provider._move_volume(self.disk, 'zone1')
+
+            self.assertTrue(moved)
+            self.assertTrue(disk_move.called)
+
+    @patch('volume_provider.providers.gce.ProviderGce.build_client')
+    @patch('volume_provider.providers.gce.CredentialGce.get_content',
+           new=MagicMock(return_value=FAKE_CREDENTIAL))
+    def test_move_disk_to_same_zone(self, client_mock):
+        with patch.object(
+                ProviderGce,
+                '_ProviderGce__wait_disk_move',
+                return_value=True):
+            disk_move = client_mock().projects().moveDisk().execute
+            moved = self.provider._move_volume(self.disk, 'fake_zone')
+
+            self.assertTrue(moved)
+            self.assertFalse(disk_move.called)
