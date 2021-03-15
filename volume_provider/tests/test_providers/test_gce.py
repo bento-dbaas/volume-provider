@@ -4,7 +4,7 @@ from unittest.mock import patch, MagicMock, PropertyMock
 from volume_provider.providers.gce import ProviderGce
 from volume_provider.credentials.gce import CredentialAddGce
 from volume_provider.models import Volume
-from .fakes.gce import *
+from .fakes.gce import FAKE_CREDENTIAL, FAKE_DISK_LIST
 from .base import GCPBaseTestCase
 
 import googleapiclient
@@ -32,7 +32,7 @@ class TestCredentialGCE(GCPBaseTestCase):
         invalid_content = deepcopy(FAKE_CREDENTIAL)
         del(invalid_content['region'])
         success, error = self.provider.credential_add(invalid_content)
-        
+
         self.assertFalse(success)
         self.assertIn("Required fields", error)
 
@@ -71,7 +71,7 @@ class CreateVolumeTestCase(GCPBaseTestCase):
     def test_get_disk_name_first_disk(self, client_mock):
         disk_name = self.provider._get_new_disk_name(self.disk)
         self.assertEqual(disk_name, 'fake_group-data1')
-    
+
     @patch('volume_provider.providers.gce.ProviderGce._get_new_disk_name',
            new=MagicMock(return_value='fake_group-disk2'))
     def test_create_disk(self, client_mock):
@@ -148,7 +148,7 @@ class DeleteVolumeTestCase(GCPBaseTestCase):
 @patch('volume_provider.providers.gce.ProviderGce._wait_zone_operation',
        new=MagicMock(return_value={'status': 'READY'}))
 class SnapshotTestCase(GCPBaseTestCase):
-    
+
     def test_create_snapshot(self, client_mock):
         take_snap = client_mock().disks().createSnapshot().execute
         get_snaps = client_mock().snapshots().get().execute
@@ -164,7 +164,7 @@ class SnapshotTestCase(GCPBaseTestCase):
         self.assertTrue(take_snap.called)
         self.assertEqual(self.snapshot.labels['db_name'], 'fake_db_name')
         self.assertEqual(self.snapshot.identifier, "newid")
-        # self.assertTrue(snap) 
+        # self.assertTrue(snap)
 
     def test_create_disk_with_snapshot(self, client_mock):
         disk_insert = client_mock().disks().insert().execute
