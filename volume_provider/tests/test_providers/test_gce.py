@@ -4,7 +4,7 @@ from unittest.mock import patch, MagicMock, PropertyMock
 from volume_provider.providers.gce import ProviderGce
 from volume_provider.credentials.gce import CredentialAddGce
 from volume_provider.models import Volume
-from .fakes.gce import *
+from .fakes.gce import FAKE_CREDENTIAL, FAKE_DISK_LIST
 from .base import GCPBaseTestCase
 
 import googleapiclient
