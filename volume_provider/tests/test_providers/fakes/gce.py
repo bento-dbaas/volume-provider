@@ -14,6 +14,7 @@ FAKE_TAGS = {
 
 FAKE_CREDENTIAL = {
     "provider":"gce",
+    "region": "fake_region",
     "service_account":{
         "type":"service_account",
         "project_id":"fake-proj-id",
