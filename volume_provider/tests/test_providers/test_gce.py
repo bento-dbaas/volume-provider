@@ -15,8 +15,10 @@ ENGINE = "redis"
 
 
 class TestCredentialGCE(GCPBaseTestCase):
-
-    def setUp(self):
+    
+    @patch('volume_provider.providers.gce.CredentialGce.get_content',
+       new=MagicMock(return_value=FAKE_CREDENTIAL))
+    def setUp(self, ):
         self.provider = ProviderGce(ENVIRONMENT, ENGINE)
         self.provider.wait_state = MagicMock()
 
@@ -145,7 +147,7 @@ class DeleteVolumeTestCase(GCPBaseTestCase):
        new=MagicMock(return_value='fake_group-disk2'))
 @patch('volume_provider.providers.gce.ProviderGce.get_disk',
        new=MagicMock(return_value={'status': 'READY'}))
-@patch('volume_provider.providers.gce.ProviderGce._wait_zone_operation',
+@patch('volume_provider.utils.gce.Wait.wait_zone_operation',
        new=MagicMock(return_value={'status': 'READY'}))
 @patch('volume_provider.providers.gce.ProviderGce._wait_global_operation',
        new=MagicMock(return_value={'status': 'READY'}))

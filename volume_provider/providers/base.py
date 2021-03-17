@@ -19,6 +19,7 @@ class ProviderBase(BasicProvider):
         self._commands = None
         self.auth_info = auth_info
 
+
     @property
     def client(self):
         if not self._client:

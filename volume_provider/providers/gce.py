@@ -17,6 +17,7 @@ from volume_provider.credentials.gce import CredentialGce, CredentialAddGce
 from volume_provider.providers.base import ProviderBase, CommandsBase
 from volume_provider.clients.team import TeamClient
 
+from volume_provider.utils.gce import Wait
 
 LOG = logging.getLogger(__name__)
 
@@ -24,6 +25,13 @@ LOG = logging.getLogger(__name__)
 class ProviderGce(ProviderBase):
 
     seconds_to_wait = 3
+
+    @property
+    def wait(self):
+        return Wait(
+            client=self.client,
+            credential=self.credential
+        )
 
     def get_commands(self):
         return CommandsGce(self)
@@ -183,14 +191,17 @@ class ProviderGce(ProviderBase):
             "storageLocations": [self.credential.region]
         }
 
-        oeration = self.client.disks().createSnapshot(
+        operation = self.client.disks().createSnapshot(
             project=self.credential.project,
             zone=volume.zone,
             disk=volume.resource_id,
             body=config
         ).execute()
 
-        self._wait_zone_operation(volume.zone, oeration.get('name'))
+        self.wait.wait_zone_operation(
+            zone=volume.zone,
+            operation_name=operation.get('name')
+        )
 
         snap = self.client.snapshots().get(
             project=self.credential.project,
@@ -370,30 +381,7 @@ class ProviderGce(ProviderBase):
                 project=self.credential.project,
                 snapshot=ss.get('name')
             ).execute()
-
-    def _check_operation_status(self, operation):
-
-        if operation.get('error'):
-            error = 'Error in {} operation: {}'.format(
-                operation.get('operationType'),
-                operation.get('error')
-            )
-            raise Exception(error)
-
-        if operation.get('status') != 'DONE':
-            error = 'Operation {} is not Done. Status: {}'.format(
-                operation.get('operationType'),
-                operation.get('status')
-            )
-            raise Exception(error)
-
-    def _wait_zone_operation(self, zone, operation):
-        op = self.client.zoneOperations().wait(
-            project=self.credential.project,
-            zone=zone,
-            operation=operation
-        ).execute()
-        self._check_operation_status(op)
+        
 
     def _wait_global_operation(self, operation):
         op = self.client.globalOperations().wait(
