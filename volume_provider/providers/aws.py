@@ -199,8 +199,10 @@ class ProviderAWS(ProviderBase):
 
 class CommandsAWS(CommandsBase):
 
+    _provider = None
+
     def __init__(self, provider):
-        self.provider = provider
+        self._provider = provider
 
     def _scp(self, snap, source_dir, target_ip, target_dir):
         script = self.die_if_error_script()
@@ -220,7 +222,7 @@ die_if_error "Error scp from {source_dir} to {target_ip}:{target_dir}"
     def _mount(self, volume, *args, **kw):
         fstab = kw.get('fstab')
         mount_devide = ''
-        self.provider.mount(volume)
+        self._provider.mount(volume)
         device = "/dev/xv{}".format(volume.path.split('/')[-1][-2:])
         extra_mount_command = getenv('EXTRA_MOUNT_COMMAND', '')
         command = '{} yum clean all && yum -y install xfsprogs'.format(
@@ -250,7 +252,7 @@ fi """.format(device)
         return command.format(mount_path=mount_path, filer_path=filer_path)
 
     def _umount(self, volume, *args, **kw):
-        self.provider.umount(volume)
+        self._provider.umount(volume)
         return "umount {}".format(kw.get('data_directory', '/data'))
 
     def _clean_up(self, volume):

@@ -1,32 +1,17 @@
-from pymongo import MongoClient, ReturnDocument
 from volume_provider.settings import MONGODB_PARAMS, MONGODB_DB
+from base_provider import BaseCredential
+from base_provider.base import ReturnDocument
 
-
-class CredentialMongoDB(object):
+class CredentialMongoDB(BaseCredential):
 
     def __init__(self, provider, environment):
-        self.provider = provider
-        self.environment = environment
-        self._db = None
-        self._collection_credential = None
-        self._content = None
-
-    @property
-    def db(self):
-        if not self._db:
-            client = MongoClient(**MONGODB_PARAMS)
-            self._db = client[MONGODB_DB]
-        return self._db
-
-    @property
-    def credential(self):
-        if not self._collection_credential:
-            self._collection_credential = self.db["credentials"]
-        return self._collection_credential
-
-    @property
-    def content(self):
-        return self._content
+        super(CredentialMongoDB, self).__init__(
+            'volume_provider',
+            provider,
+            environment
+        )
+        self.MONGODB_PARAMS = MONGODB_PARAMS
+        self.MONGODB_DB = MONGODB_DB
 
 
 class CredentialBase(CredentialMongoDB):

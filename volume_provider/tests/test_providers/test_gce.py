@@ -60,6 +60,8 @@ class TestCredentialGCE(GCPBaseTestCase):
        new=MagicMock(return_value=FAKE_CREDENTIAL))
 @patch('volume_provider.providers.gce.ProviderGce.get_disk',
        new=MagicMock(return_value={'status': 'READY'}))
+@patch('base_provider.BaseProvider.wait_zone_operation',
+       new=MagicMock(return_value={'status': 'READY'}))
 class CreateVolumeTestCase(GCPBaseTestCase):
 
     @patch('volume_provider.providers.gce.ProviderGce._get_volumes',
@@ -91,6 +93,8 @@ class CreateVolumeTestCase(GCPBaseTestCase):
 @patch('volume_provider.providers.gce.ProviderGce.build_client')
 @patch('volume_provider.providers.gce.CredentialGce.get_content',
        new=MagicMock(return_value=FAKE_CREDENTIAL))
+@patch('base_provider.BaseProvider.wait_zone_operation',
+       new=MagicMock(return_value={'status': 'READY'}))
 class ResizeVolumeTestCase(GCPBaseTestCase):
     def test_resize_disk_wrong_size(self, client_mock):
         with self.assertRaises(EnvironmentError):
@@ -111,6 +115,8 @@ class ResizeVolumeTestCase(GCPBaseTestCase):
        new=MagicMock(return_value=[]))
 @patch('volume_provider.providers.gce.ProviderGce._detach_disk',
        new=MagicMock(return_value=True))
+@patch('base_provider.BaseProvider.wait_zone_operation',
+       new=MagicMock(return_value={'status': 'READY'}))
 class DeleteVolumeTestCase(GCPBaseTestCase):
     def test_delete_disk(self, client_mock):
         disk_delete = client_mock().disks().delete().execute
@@ -147,9 +153,9 @@ class DeleteVolumeTestCase(GCPBaseTestCase):
        new=MagicMock(return_value='fake_group-disk2'))
 @patch('volume_provider.providers.gce.ProviderGce.get_disk',
        new=MagicMock(return_value={'status': 'READY'}))
-@patch('volume_provider.utils.gce.Wait.wait_zone_operation',
+@patch('base_provider.BaseProvider.wait_zone_operation',
        new=MagicMock(return_value={'status': 'READY'}))
-@patch('volume_provider.providers.gce.ProviderGce._wait_global_operation',
+@patch('base_provider.BaseProvider.wait_global_operation',
        new=MagicMock(return_value={'status': 'READY'}))
 class SnapshotTestCase(GCPBaseTestCase):
 
@@ -190,26 +196,20 @@ class SnapshotTestCase(GCPBaseTestCase):
 @patch('volume_provider.providers.gce.ProviderGce.build_client')
 @patch('volume_provider.providers.gce.CredentialGce.get_content',
        new=MagicMock(return_value=FAKE_CREDENTIAL))
+@patch('base_provider.BaseProvider.wait_global_operation',
+       new=MagicMock(return_value={'status': 'READY'}))
 class MoveDiskTestCase(GCPBaseTestCase):
 
     def test_move_disk(self, client_mock):
-        with patch.object(
-                ProviderGce,
-                '_ProviderGce__wait_disk_move',
-                return_value=True):
-            disk_move = client_mock().projects().moveDisk().execute
-            moved = self.provider._move_volume(self.disk, 'zone1')
+        disk_move = client_mock().projects().moveDisk().execute
+        moved = self.provider._move_volume(self.disk, 'zone1')
 
-            self.assertTrue(moved)
-            self.assertTrue(disk_move.called)
+        self.assertTrue(moved)
+        self.assertTrue(disk_move.called)
 
     def test_move_disk_to_same_zone(self, client_mock):
-        with patch.object(
-                ProviderGce,
-                '_ProviderGce__wait_disk_move',
-                return_value=True):
-            disk_move = client_mock().projects().moveDisk().execute
-            moved = self.provider._move_volume(self.disk, 'fake_zone')
+        disk_move = client_mock().projects().moveDisk().execute
+        moved = self.provider._move_volume(self.disk, 'fake_zone')
 
-            self.assertTrue(moved)
-            self.assertFalse(disk_move.called)
+        self.assertTrue(moved)
+        self.assertFalse(disk_move.called)

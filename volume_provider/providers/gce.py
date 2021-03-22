@@ -17,21 +17,12 @@ from volume_provider.credentials.gce import CredentialGce, CredentialAddGce
 from volume_provider.providers.base import ProviderBase, CommandsBase
 from volume_provider.clients.team import TeamClient
 
-from volume_provider.utils.gce import Wait
-
 LOG = logging.getLogger(__name__)
 
 
 class ProviderGce(ProviderBase):
 
     seconds_to_wait = 3
-
-    @property
-    def wait(self):
-        return Wait(
-            client=self.client,
-            credential=self.credential
-        )
 
     def get_commands(self):
         return CommandsGce(self)
@@ -112,7 +103,10 @@ class ProviderGce(ProviderBase):
         volume.path = "/dev/disk/by-id/google-%s" % \
             self.get_device_name(disk_name)
 
-        return self.__wait_disk_create(volume)
+        return self.wait_zone_operation(
+            zone=volume.zone,
+            operation=disk_create.get('name')
+        )
 
     def _add_access(self, volume, to_address, *args, **kwargs):
         pass
@@ -130,13 +124,16 @@ class ProviderGce(ProviderBase):
             snap.delete()
         '''
 
-        self.client.disks().delete(
+        delete_volume = self.client.disks().delete(
             project=self.credential.project,
             zone=volume.zone,
             disk=volume.resource_id
         ).execute()
 
-        return True
+        return self.wait_zone_operation(
+            zone=volume.zone,
+            operation=delete_volume.get('name')
+        )
 
     def _resize(self, volume, new_size_kb):
         if new_size_kb <= volume.size_kb:
@@ -147,14 +144,17 @@ class ProviderGce(ProviderBase):
         config = {
             "sizeGb": volume.convert_kb_to_gb(new_size_kb, to_int=True)
         }
-        self.client.disks().resize(
+        disk_resize = self.client.disks().resize(
             project=self.credential.project,
             zone=volume.zone,
             disk=volume.resource_id,
             body=config
         ).execute()
 
-        return True
+        return self.wait_zone_operation(
+            zone=volume.zone,
+            operation=disk_resize.get('name')
+        )
 
     def __verify_none(self, dict_var, key, var):
         if var and key:
@@ -198,9 +198,9 @@ class ProviderGce(ProviderBase):
             body=config
         ).execute()
 
-        self.wait.wait_zone_operation(
+        self.wait_zone_operation(
             zone=volume.zone,
-            operation_name=operation.get('name')
+            operation=operation.get('name')
         )
 
         snap = self.client.snapshots().get(
@@ -216,8 +216,7 @@ class ProviderGce(ProviderBase):
                 project=self.credential.project,
                 snapshot=snapshot.description
         ).execute()
-        self._wait_global_operation(oeration.get('name'))
-        return True
+        return self.wait_global_operation(oeration.get('name'))
 
     def _restore_snapshot(self, snapshot, volume):
         return self._create_volume(volume, snapshot=snapshot)
@@ -252,7 +251,7 @@ class ProviderGce(ProviderBase):
             "autoDelete": True
         }
 
-        self.client\
+        attach_disk = self.client\
             .instances().attachDisk(
                 project=self.credential.project,
                 zone=volume.zone,
@@ -260,16 +259,23 @@ class ProviderGce(ProviderBase):
                 body=config
             ).execute()
 
-        return self.__wait_disk_attach(volume)
+        return self.wait_zone_operation(
+            zone=volume.zone,
+            operation=attach_disk.get('name')
+        )
 
     def _detach_disk(self, volume):
-        self.client.instances().detachDisk(
+        detach_disk = self.client.instances().detachDisk(
                 project=self.credential.project,
                 zone=volume.zone,
                 instance=volume.vm_name,
                 deviceName=self.get_device_name(volume.resource_id)
         ).execute()
-        self.__wait_disk_detach(volume)
+
+        return self.wait_zone_operation(
+            zone=volume.zone,
+            operation=detach_disk.get('name')
+        )
 
     def _move_volume(self, volume, zone):
         if volume.zone == zone:
@@ -282,86 +288,19 @@ class ProviderGce(ProviderBase):
             },
             "destinationZone": "zones/%s" % zone
         }
-        self.client.projects().moveDisk(
+        move_volume = self.client.projects().moveDisk(
             project=self.credential.project,
             body=config
         ).execute()
 
-        return self.__wait_disk_move(volume, zone)
-
-    def __wait_disk_move(self, volume, zone):
-        disk_previous = self.get_disk(
-            volume.resource_id,
-            volume.zone,
-            execute_request=False
+        return self.wait_global_operation(
+            operation=move_volume.get('name')
         )
-
-        disk_next = self.get_disk(
-            volume.resource_id,
-            zone,
-            execute_request=False
-        )
-
-        # waiting for 404
-        while True:
-            try:
-                disk_previous.execute()
-            except HttpError as ex:
-                if ex.resp.status == 404:
-                    break
-                else:
-                    raise(ex)
-            sleep(self.seconds_to_wait)
-
-        while True:
-            try:
-                disk = disk_next.execute()
-                if disk.get('status') == "READY":
-                    break
-            except HttpError as ex:
-                if ex.resp.status == 404:
-                    pass
-                else:
-                    raise Exception(ex)
-            sleep(self.seconds_to_wait)
-        return True
-
     def __wait_instance_status(self, volume, status):
         while self.get_instance_status(volume) != status:
             sleep(self.seconds_to_wait)
 
         return True
-
-    def __wait_disk_detach(self, volume):
-        '''while self.get_device_name(volume.resource_id) in\
-         self.__get_instance_disks(volume.zone, volume.vm_name):
-            sleep(self.seconds_to_wait)'''
-        while self.client.disks().get(
-            project=self.credential.project,
-            zone=volume.zone,
-            disk=volume.resource_id
-        ).execute().get("users"):
-            sleep(self.seconds_to_wait)
-
-        return True
-
-    def __wait_disk_create(self, volume):
-        while self.get_disk(
-            volume.resource_id,
-            volume.zone
-        ).get('status') != "READY":
-            sleep(self.seconds_to_wait)
-
-        return True
-
-    def __wait_disk_attach(self, volume):
-        attach = False
-        while not attach:
-            disk = self.get_disk(volume.resource_id, volume.zone)
-            if not disk.get('lastAttachTimestamp'):
-                sleep(self.seconds_to_wait)
-            else:
-                attach = True
 
     def _delete_old_volume(self, volume):
         return self.__destroy_volume(volume, snapshot_offset=1)
@@ -380,21 +319,15 @@ class ProviderGce(ProviderBase):
             self.client.snapshots().delete(
                 project=self.credential.project,
                 snapshot=ss.get('name')
-            ).execute()
-        
-
-    def _wait_global_operation(self, operation):
-        op = self.client.globalOperations().wait(
-            project=self.credential.project,
-            operation=operation
-        ).execute()
-        self._check_operation_status(op)
+            ).execute()      
 
 
 class CommandsGce(CommandsBase):
 
+    _provider = None
+
     def __init__(self, provider):
-        self.provider = provider
+        self._provider = provider
 
     def _mount(self, volume, fstab=True,
                host_vm=None, host_zone=None, *args, **kwargs):
@@ -403,7 +336,7 @@ class CommandsGce(CommandsBase):
         volume.zone = host_zone or volume.zone
         volume.save()
 
-        self.provider.attach_disk(volume)
+        self._provider.attach_disk(volume)
 
         # waiting symlink creation
         command = """while ! [[ -L "%(disk_path)s" ]];\
