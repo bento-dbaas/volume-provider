@@ -152,14 +152,6 @@ class ProviderBase(BasicProvider):
     def _restore_snapshot(self, snapshot, volume):
         raise NotImplementedError
 
-    def delete_old_volume(self, identifier):
-        volume = self.load_volume(identifier)
-        self._delete_old_volume(volume)
-        volume.delete()
-
-    def _delete_old_volume(self, volume):
-        pass
-
     def get_volumes_from(self, **kwargs):
         return Volume.objects.filter(**kwargs).values_list('resource_id')
 

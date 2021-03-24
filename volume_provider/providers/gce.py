@@ -111,18 +111,9 @@ class ProviderGce(ProviderBase):
     def _add_access(self, volume, to_address, *args, **kwargs):
         pass
 
-    def __destroy_volume(self, volume, snapshot_offset=0):
+    def __destroy_volume(self, volume):
 
         self._detach_disk(volume)
-
-        '''
-        snapshots = self.get_snapshots_from(
-            offset=snapshot_offset,**{'volume': volume}
-        )
-        for snap in snapshots:
-            self._remove_snapshot(snap)
-            snap.delete()
-        '''
 
         delete_volume = self.client.disks().delete(
             project=self.credential.project,
@@ -302,11 +293,7 @@ class ProviderGce(ProviderBase):
 
         return True
 
-    def _delete_old_volume(self, volume):
-        return self.__destroy_volume(volume, snapshot_offset=1)
-
     def _delete_volume(self, volume):
-        # self._remove_all_snapshots(volume.group)
         return self.__destroy_volume(volume)
 
     def _remove_all_snapshots(self, group):
