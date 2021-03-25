@@ -103,7 +103,7 @@ class ProviderGce(ProviderBase):
         volume.path = "/dev/disk/by-id/google-%s" % \
             self.get_device_name(disk_name)
 
-        return self.wait_zone_operation(
+        return self.wait_operation(
             zone=volume.zone,
             operation=disk_create.get('name')
         )
@@ -121,7 +121,7 @@ class ProviderGce(ProviderBase):
             disk=volume.resource_id
         ).execute()
 
-        return self.wait_zone_operation(
+        return self.wait_operation(
             zone=volume.zone,
             operation=delete_volume.get('name')
         )
@@ -142,7 +142,7 @@ class ProviderGce(ProviderBase):
             body=config
         ).execute()
 
-        return self.wait_zone_operation(
+        return self.wait_operation(
             zone=volume.zone,
             operation=disk_resize.get('name')
         )
@@ -189,7 +189,7 @@ class ProviderGce(ProviderBase):
             body=config
         ).execute()
 
-        self.wait_zone_operation(
+        self.wait_operation(
             zone=volume.zone,
             operation=operation.get('name')
         )
@@ -207,7 +207,7 @@ class ProviderGce(ProviderBase):
                 project=self.credential.project,
                 snapshot=snapshot.description
         ).execute()
-        return self.wait_global_operation(oeration.get('name'))
+        return self.wait_operation(operation=oeration.get('name'))
 
     def _restore_snapshot(self, snapshot, volume):
         return self._create_volume(volume, snapshot=snapshot)
@@ -250,7 +250,7 @@ class ProviderGce(ProviderBase):
                 body=config
             ).execute()
 
-        return self.wait_zone_operation(
+        return self.wait_operation(
             zone=volume.zone,
             operation=attach_disk.get('name')
         )
@@ -263,7 +263,7 @@ class ProviderGce(ProviderBase):
                 deviceName=self.get_device_name(volume.resource_id)
         ).execute()
 
-        return self.wait_zone_operation(
+        return self.wait_operation(
             zone=volume.zone,
             operation=detach_disk.get('name')
         )
@@ -284,9 +284,10 @@ class ProviderGce(ProviderBase):
             body=config
         ).execute()
 
-        return self.wait_global_operation(
+        return self.wait_operation(
             operation=move_volume.get('name')
         )
+
     def __wait_instance_status(self, volume, status):
         while self.get_instance_status(volume) != status:
             sleep(self.seconds_to_wait)
@@ -306,7 +307,7 @@ class ProviderGce(ProviderBase):
             self.client.snapshots().delete(
                 project=self.credential.project,
                 snapshot=ss.get('name')
-            ).execute()      
+            ).execute()
 
 
 class CommandsGce(CommandsBase):
