@@ -32,6 +32,7 @@ class CredentialBase(CredentialMongoDB):
     def content(self):
         if not self._content:
             self._content = self.get_content()
+        
         return super(CredentialBase, self).content
 
     def get_by(self, **kwargs):

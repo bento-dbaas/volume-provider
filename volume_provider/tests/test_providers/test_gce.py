@@ -15,9 +15,9 @@ ENGINE = "redis"
 
 
 class TestCredentialGCE(GCPBaseTestCase):
-    
+
     @patch('volume_provider.providers.gce.CredentialGce.get_content',
-       new=MagicMock(return_value=FAKE_CREDENTIAL))
+           new=MagicMock(return_value=FAKE_CREDENTIAL))
     def setUp(self, ):
         self.provider = ProviderGce(ENVIRONMENT, ENGINE)
         self.provider.wait_operation_state = MagicMock()

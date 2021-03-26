@@ -9,7 +9,7 @@ class BasicProvider(BaseProvider):
     def load_volume(identifier, search_field="identifier"):
         volume = Volume.objects(**{search_field: identifier}).get()
         return volume
-    
+
 
 class ProviderBase(BasicProvider):
 
