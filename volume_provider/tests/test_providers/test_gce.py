@@ -60,7 +60,7 @@ class TestCredentialGCE(GCPBaseTestCase):
        new=MagicMock(return_value=FAKE_CREDENTIAL))
 @patch('volume_provider.providers.gce.ProviderGce.get_disk',
        new=MagicMock(return_value={'status': 'READY'}))
-@patch('base_provider.BaseProvider.wait_operation',
+@patch('dbaas_base_provider.BaseProvider.wait_operation',
        new=MagicMock(return_value={'status': 'READY'}))
 class CreateVolumeTestCase(GCPBaseTestCase):
 
@@ -93,7 +93,7 @@ class CreateVolumeTestCase(GCPBaseTestCase):
 @patch('volume_provider.providers.gce.ProviderGce.build_client')
 @patch('volume_provider.providers.gce.CredentialGce.get_content',
        new=MagicMock(return_value=FAKE_CREDENTIAL))
-@patch('base_provider.BaseProvider.wait_operation',
+@patch('dbaas_base_provider.BaseProvider.wait_operation',
        new=MagicMock(return_value={'status': 'READY'}))
 class ResizeVolumeTestCase(GCPBaseTestCase):
     def test_resize_disk_wrong_size(self, client_mock):
@@ -115,7 +115,7 @@ class ResizeVolumeTestCase(GCPBaseTestCase):
        new=MagicMock(return_value=[]))
 @patch('volume_provider.providers.gce.ProviderGce._detach_disk',
        new=MagicMock(return_value=True))
-@patch('base_provider.BaseProvider.wait_operation',
+@patch('dbaas_base_provider.BaseProvider.wait_operation',
        new=MagicMock(return_value={'status': 'READY'}))
 class DeleteVolumeTestCase(GCPBaseTestCase):
     def test_delete_disk(self, client_mock):
@@ -153,9 +153,9 @@ class DeleteVolumeTestCase(GCPBaseTestCase):
        new=MagicMock(return_value='fake_group-disk2'))
 @patch('volume_provider.providers.gce.ProviderGce.get_disk',
        new=MagicMock(return_value={'status': 'READY'}))
-@patch('base_provider.BaseProvider.wait_operation',
+@patch('dbaas_base_provider.BaseProvider.wait_operation',
        new=MagicMock(return_value={'status': 'READY'}))
-@patch('base_provider.BaseProvider.wait_operation',
+@patch('dbaas_base_provider.BaseProvider.wait_operation',
        new=MagicMock(return_value={'status': 'READY'}))
 class SnapshotTestCase(GCPBaseTestCase):
 
@@ -196,7 +196,7 @@ class SnapshotTestCase(GCPBaseTestCase):
 @patch('volume_provider.providers.gce.ProviderGce.build_client')
 @patch('volume_provider.providers.gce.CredentialGce.get_content',
        new=MagicMock(return_value=FAKE_CREDENTIAL))
-@patch('base_provider.BaseProvider.wait_operation',
+@patch('dbaas_base_provider.BaseProvider.wait_operation',
        new=MagicMock(return_value={'status': 'READY'}))
 class MoveDiskTestCase(GCPBaseTestCase):
 

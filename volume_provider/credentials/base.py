@@ -1,6 +1,6 @@
 from volume_provider.settings import MONGODB_PARAMS, MONGODB_DB
-from base_provider import BaseCredential
-from base_provider.base import ReturnDocument
+from dbaas_base_provider import BaseCredential
+from dbaas_base_provider.base import ReturnDocument
 
 class CredentialMongoDB(BaseCredential):
 

@@ -35,7 +35,7 @@ class TestBaseProvider(TestCase):
         self.assertRaises(NotImplementedError, credential.get_content)
 
 
-    @patch('base_provider.baseCredential.MongoClient')
+    @patch('dbaas_base_provider.baseCredential.MongoClient')
     def test_mongo_db_connection(self, mongo_client):
         credential = CredentialBase(PROVIDER, ENVIRONMENT)
         self.assertIsNotNone(credential.credential)
