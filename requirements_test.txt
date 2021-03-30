@@ -5,3 +5,4 @@ pytest-cov==1.8.1
 pytest==2.7.2
 six==1.15.0
 recordclass==0.14.3
+coveralls==3.0.1

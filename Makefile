@@ -7,6 +7,9 @@ run:
 test:
 	DBAAS_AWS_PROXY=;coverage run --source=./ -m unittest discover --start-directory ./volume_provider/tests -p "*.py"
 
+test_report: test
+	coverage report -m
+
 deploy_dev:
 	tsuru app-deploy -a volume-provider-dev .
 

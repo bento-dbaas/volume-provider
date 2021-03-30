@@ -4,8 +4,10 @@ python:
 services:
   - mongodb
 script:
-  - make test
+  - make test_report
 install:
   - pip install -r requirements_test.txt
 notifications:
   email: false
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
