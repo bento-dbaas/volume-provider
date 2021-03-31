@@ -18,7 +18,7 @@ class CredentialGce(CredentialBase):
 
 class CredentialAddGce(CredentialAdd):
     @property
-    def valid_fields(self):
+    def valid_fields(self, *args, **kwargs):
         return ['provider', 'service_account',
                 'environment', 'offerings',
                 'project', 'availability_zones', 'subnetwork',

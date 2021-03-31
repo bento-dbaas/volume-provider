@@ -81,7 +81,7 @@ class CredentialAdd(CredentialMongoDB):
     def valid_fields(self):
         raise NotImplementedError
 
-    def is_valid(self):
+    def is_valid(self,  *args, **kwargs):
         error = "Required fields {}".format(self.valid_fields)
         if len(self.valid_fields) != len(self.content.keys()):
             return False, error
