@@ -4,9 +4,12 @@ from dbaas_base_provider.base import ReturnDocument
 
 class CredentialMongoDB(BaseCredential):
 
+    @property
+    def provider_type(self):
+        return 'volume_provider'
+
     def __init__(self, provider, environment):
         super(CredentialMongoDB, self).__init__(
-            'volume_provider',
             provider,
             environment
         )
