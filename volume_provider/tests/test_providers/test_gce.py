@@ -155,8 +155,6 @@ class DeleteVolumeTestCase(GCPBaseTestCase):
        new=MagicMock(return_value={'status': 'READY'}))
 @patch('dbaas_base_provider.BaseProvider.wait_operation',
        new=MagicMock(return_value={'status': 'READY'}))
-@patch('dbaas_base_provider.BaseProvider.wait_operation',
-       new=MagicMock(return_value={'status': 'READY'}))
 class SnapshotTestCase(GCPBaseTestCase):
 
     def test_create_snapshot(self, client_mock):
