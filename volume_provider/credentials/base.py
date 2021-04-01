@@ -2,6 +2,7 @@ from volume_provider.settings import MONGODB_PARAMS, MONGODB_DB
 from dbaas_base_provider import BaseCredential
 from dbaas_base_provider.base import ReturnDocument
 
+
 class CredentialMongoDB(BaseCredential):
 
     @property
@@ -35,7 +36,7 @@ class CredentialBase(CredentialMongoDB):
     def content(self):
         if not self._content:
             self._content = self.get_content()
-        
+
         return super(CredentialBase, self).content
 
     def get_by(self, **kwargs):
@@ -81,7 +82,7 @@ class CredentialAdd(CredentialMongoDB):
     def valid_fields(self):
         raise NotImplementedError
 
-    def is_valid(self,  *args, **kwargs):
+    def is_valid(self, *args, **kwargs):
         error = "Required fields {}".format(self.valid_fields)
         if len(self.valid_fields) != len(self.content.keys()):
             return False, error

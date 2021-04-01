@@ -199,7 +199,7 @@ class ProviderGce(ProviderBase):
             snapshot=snapshot_name
         ).execute()
 
-        snapshot.identifier  = snap.get('id')
+        snapshot.identifier = snap.get('id')
         snapshot.size_bytes = snap.get('downloadBytes')
 
     def _remove_snapshot(self, snapshot, *args, **kwrgs):
