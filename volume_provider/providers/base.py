@@ -4,10 +4,7 @@ from dbaas_base_provider import BaseProvider
 
 
 class BasicProvider(BaseProvider):
-
-    @property
-    def provider_type(self):
-        return 'volume_provider'
+    provider_type = "volume_provider"
 
     @staticmethod
     def load_volume(identifier, search_field="identifier"):
