@@ -466,6 +466,20 @@ def cleanup(provider_name, env, identifier):
     return response_ok(command=command)
 
 
+@app.route(
+    "/<string:provider_name>/<string:env>/commands/<string:identifier>/resize2fs",
+    methods=['POST']
+)
+@auth.login_required
+def resize2fs(provider_name, env, identifier):
+    try:
+        provider = build_provider(provider_name, env)
+        command = provider.commands.resize2fs(identifier)
+    except Exception as e:  # TODO What can get wrong here?
+        print_exc()  # TODO Improve log
+        return response_invalid_request(str(e))
+    return response_ok(command=command)
+
 def _validate_payload(keys):
     data = request.get_json()
     data_keys = data.keys()

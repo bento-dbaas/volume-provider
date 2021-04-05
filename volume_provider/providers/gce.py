@@ -360,3 +360,6 @@ class CommandsGce(CommandsBase):
         command += ' && echo "{filer_path}  {mount_path}  \
               ext4 defaults    0   0" >> /etc/fstab'
         return command.format(mount_path=mount_path, filer_path=filer_path)
+
+    def _resize2fs(self, volume):
+        return "resize2fs {}".format(volume.path)

@@ -277,3 +277,11 @@ die_if_error "Error to remove public key dbaas"
 
     def _copy_files(self, *args, **kwargs):
         raise NotImplementedError
+
+    def resize2fs(self, identifier):
+        volume = self.load_volume(identifier)
+        return self._resize2fs(volume)
+
+    def _resize2fs(self, volume):
+        return ""
+
