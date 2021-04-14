@@ -2,6 +2,8 @@ import json
 import logging
 from datetime import datetime
 from time import sleep
+import httplib2
+import google_auth_httplib2
 
 from os import getenv
 from collections import namedtuple
@@ -12,7 +14,7 @@ from googleapiclient.errors import HttpError
 import googleapiclient.discovery
 from google.oauth2 import service_account
 
-from volume_provider.settings import AWS_PROXY, TAG_BACKUP_DBAAS
+from volume_provider.settings import HTTP_PROXY, TAG_BACKUP_DBAAS
 from volume_provider.credentials.gce import CredentialGce, CredentialAddGce
 from volume_provider.providers.base import ProviderBase, CommandsBase
 from volume_provider.clients.team import TeamClient
@@ -32,17 +34,45 @@ class ProviderGce(ProviderBase):
         return 'gce'
 
     def build_client(self):
-        service_account_data = self.credential.service_account
+        service_account_data = self.credential.content['service_account']
         service_account_data['private_key'] = service_account_data[
             'private_key'
         ].replace('\\n', '\n')
+
         credentials = service_account.Credentials.from_service_account_info(
-            service_account_data
+            service_account_data,
+            scopes=self.credential.scopes
         )
-        credentials
-        return googleapiclient.discovery.build(
-            'compute', 'v1', credentials=credentials
-        )
+
+        if HTTP_PROXY:
+            _, host, port = HTTP_PROXY.split(':')
+            try:
+                port = int(port)
+            except ValueError:
+                raise EnvironmentError('HTTP_PROXY incorrect format')
+
+            proxied_http = httplib2.Http(proxy_info=httplib2.ProxyInfo(
+                httplib2.socks.PROXY_TYPE_HTTP,
+                host.replace('//', ''),
+                port
+            ))
+
+            authorized_http = google_auth_httplib2.AuthorizedHttp(
+                                credentials,
+                                http=proxied_http)
+
+            service = googleapiclient.discovery.build(
+                        'compute',
+                        'v1',
+                        http=authorized_http)
+        else:
+            service = googleapiclient.discovery.build(
+                'compute',
+                'v1',
+                credentials=credentials,
+            )
+
+        return service
 
     def build_credential(self):
         return CredentialGce(

@@ -55,7 +55,8 @@ FAKE_CREDENTIAL = {
         "mongodb_3_4_1":"img-fke1",
         "mongodb_4_0_3":"img-fke2",
         "mongodb_4_2_3":"img-fke3"
-        }
+        },
+    "scopes": ["fake_scope"]
     }
 
 FAKE_DISK_OBJ = recordclass('FakeDiskObj', 'id name zone identifier\

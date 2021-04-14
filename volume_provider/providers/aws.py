@@ -3,7 +3,7 @@ from collections import namedtuple
 from time import sleep
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
-from volume_provider.settings import AWS_PROXY, TAG_BACKUP_DBAAS
+from volume_provider.settings import HTTP_PROXY, HTTPS_PROXY, TAG_BACKUP_DBAAS
 from volume_provider.credentials.aws import CredentialAWS, CredentialAddAWS
 from volume_provider.providers.base import ProviderBase, CommandsBase
 from volume_provider.clients.team import TeamClient
@@ -31,12 +31,12 @@ class ProviderAWS(ProviderBase):
             self.credential.access_id,
             self.credential.secret_key,
             region=self.credential.region,
-            **{'proxy_url': AWS_PROXY} if AWS_PROXY else {}
+            **{'proxy_url': HTTP_PROXY} if HTTP_PROXY else {}
         )
 
-        if AWS_PROXY:
+        if HTTP_PROXY:
             client.connection.connection.session.proxies.update({
-                'https': AWS_PROXY.replace('http://', 'https://')
+                'https': HTTPS_PROXY
             })
         return client
 
@@ -193,9 +193,10 @@ class ProviderAWS(ProviderBase):
     def _restore_snapshot(self, snapshot, volume):
         ebs_snapshot = self.__get_snapshot(snapshot)
         self._create_volume(volume, ebs_snapshot)
-    
+
     def _delete_old_volume(self, volume):
         pass
+
 
 class CommandsAWS(CommandsBase):
 

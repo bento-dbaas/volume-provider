@@ -12,6 +12,10 @@ class CredentialGce(CredentialBase):
         return self.content['service_account']
 
     @property
+    def scopes(self):
+        return self.content['scopes']
+
+    @property
     def region(self):
         return self.content['region']
 
@@ -22,4 +26,4 @@ class CredentialAddGce(CredentialAdd):
         return ['provider', 'service_account',
                 'environment', 'offerings',
                 'project', 'availability_zones', 'subnetwork',
-                'templates', 'region']
+                'templates', 'region', 'scopes']
