@@ -106,3 +106,6 @@ venv.bak/
 
 # local dev files
 .export-volume-provider-local-dev.sh
+
+
+.vscode/

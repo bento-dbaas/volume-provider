@@ -3,7 +3,7 @@ from collections import namedtuple
 from time import sleep
 from libcloud.compute.types import Provider
 from libcloud.compute.providers import get_driver
-from volume_provider.settings import AWS_PROXY, TAG_BACKUP_DBAAS
+from volume_provider.settings import HTTP_PROXY, HTTPS_PROXY, TAG_BACKUP_DBAAS
 from volume_provider.credentials.aws import CredentialAWS, CredentialAddAWS
 from volume_provider.providers.base import ProviderBase, CommandsBase
 from volume_provider.clients.team import TeamClient
@@ -31,12 +31,12 @@ class ProviderAWS(ProviderBase):
             self.credential.access_id,
             self.credential.secret_key,
             region=self.credential.region,
-            **{'proxy_url': AWS_PROXY} if AWS_PROXY else {}
+            **{'proxy_url': HTTP_PROXY} if HTTP_PROXY else {}
         )
 
-        if AWS_PROXY:
+        if HTTP_PROXY:
             client.connection.connection.session.proxies.update({
-                'https': AWS_PROXY.replace('http://', 'https://')
+                'https': HTTPS_PROXY
             })
         return client
 
@@ -193,14 +193,17 @@ class ProviderAWS(ProviderBase):
     def _restore_snapshot(self, snapshot, volume):
         ebs_snapshot = self.__get_snapshot(snapshot)
         self._create_volume(volume, ebs_snapshot)
-    
+
     def _delete_old_volume(self, volume):
         pass
 
+
 class CommandsAWS(CommandsBase):
 
+    _provider = None
+
     def __init__(self, provider):
-        self.provider = provider
+        self._provider = provider
 
     def _scp(self, snap, source_dir, target_ip, target_dir):
         script = self.die_if_error_script()
@@ -220,7 +223,7 @@ die_if_error "Error scp from {source_dir} to {target_ip}:{target_dir}"
     def _mount(self, volume, *args, **kw):
         fstab = kw.get('fstab')
         mount_devide = ''
-        self.provider.mount(volume)
+        self._provider.mount(volume)
         device = "/dev/xv{}".format(volume.path.split('/')[-1][-2:])
         extra_mount_command = getenv('EXTRA_MOUNT_COMMAND', '')
         command = '{} yum clean all && yum -y install xfsprogs'.format(
@@ -250,7 +253,7 @@ fi """.format(device)
         return command.format(mount_path=mount_path, filer_path=filer_path)
 
     def _umount(self, volume, *args, **kw):
-        self.provider.umount(volume)
+        self._provider.umount(volume)
         return "umount {}".format(kw.get('data_directory', '/data'))
 
     def _clean_up(self, volume):
