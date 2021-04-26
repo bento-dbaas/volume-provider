@@ -1,6 +1,6 @@
 from volume_provider.models import Volume, Snapshot
 from datetime import datetime
-from dbaas_base_provider import BaseProvider
+from dbaas_base_provider.baseProvider import BaseProvider
 
 
 class BasicProvider(BaseProvider):

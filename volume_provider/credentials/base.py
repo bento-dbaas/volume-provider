@@ -1,5 +1,5 @@
 from volume_provider.settings import MONGODB_PARAMS, MONGODB_DB
-from dbaas_base_provider import BaseCredential
+from dbaas_base_provider.baseCredential import BaseCredential
 from dbaas_base_provider.base import ReturnDocument
 
 
