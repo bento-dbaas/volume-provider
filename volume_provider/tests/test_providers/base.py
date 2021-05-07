@@ -11,6 +11,8 @@ from volume_provider.providers import ProviderGce
 
 from .fakes.gce import FAKE_CREDENTIAL, FAKE_DISK, FAKE_SNAP
 
+from unittest.mock import patch, MagicMock, PropertyMock
+
 ENVIRONMENT = "dev"
 ENGINE = "redis"
 FAKE_CERT_PATH = "/path/to/certs/"

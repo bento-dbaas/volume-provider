@@ -1,4 +1,5 @@
 import json
+import logging
 from traceback import print_exc
 from bson import json_util
 from flask import Flask, request, jsonify, make_response
@@ -6,7 +7,7 @@ from flask_cors import CORS
 from flask_httpauth import HTTPBasicAuth
 from mongoengine import connect
 from volume_provider.settings import APP_USERNAME, APP_PASSWORD, \
-    MONGODB_PARAMS, MONGODB_DB
+    MONGODB_PARAMS, MONGODB_DB, LOGGING_LEVEL
 from volume_provider.providers import get_provider_to
 
 
@@ -14,6 +15,7 @@ app = Flask(__name__)
 auth = HTTPBasicAuth()
 cors = CORS(app)
 connect(MONGODB_DB, **MONGODB_PARAMS)
+logging.basicConfig(level=LOGGING_LEVEL)
 
 
 @auth.verify_password
@@ -113,7 +115,6 @@ def create_volume(provider_name, env):
     group = data.get("group", None)
     size_kb = data.get("size_kb", None)
 
-
     if not(group and size_kb):
         return response_invalid_request("Invalid data {}".format(data))
 
@@ -140,22 +141,6 @@ def delete_volume(provider_name, env, identifier):
         return response_invalid_request(str(e))
     return response_ok()
 
-
-@app.route(
-    "/<string:provider_name>/<string:env>/remove-old-volume/<string:identifier>",
-    methods=['DELETE']
-)
-@auth.login_required
-def delete_old_volume(provider_name, env, identifier):
-    try:
-        provider = build_provider(provider_name, env)
-        provider.delete_old_volume(identifier)
-    except Exception as e:  # TODO What can get wrong here?
-        print_exc()  # TODO Improve log
-        return response_invalid_request(str(e))
-    return response_ok()
-
-
 @app.route(
     "/<string:provider_name>/<string:env>/detach-disk/<string:identifier>",
     methods=['POST']
@@ -165,6 +150,25 @@ def detach_disk(provider_name, env, identifier):
     try:
         provider = build_provider(provider_name, env)
         provider.detach_disk(identifier)
+    except Exception as e:  # TODO What can get wrong here?
+        print_exc()  # TODO Improve log
+        return response_invalid_request(str(e))
+    return response_ok()
+
+@app.route(
+    "/<string:provider_name>/<string:env>/move/<string:identifier>",
+    methods=['POST']
+)
+@auth.login_required
+def move_volume(provider_name, env, identifier):
+    data = request.get_json()
+    zone = data.get('zone')
+
+    if not zone:
+        return response_invalid_request("Invalid zone")
+    try:
+        provider = build_provider(provider_name, env)
+        provider.move_volume(identifier, zone)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
@@ -268,7 +272,8 @@ def take_snapshot(provider_name, env, identifier):
     return response_created(
         identifier=snapshot.identifier,
         description=snapshot.description,
-        volume_path=snapshot.volume.path
+        volume_path=snapshot.volume.path,
+        size=snapshot.size_bytes
     )
 
 
@@ -460,6 +465,20 @@ def cleanup(provider_name, env, identifier):
         return response_invalid_request(str(e))
     return response_ok(command=command)
 
+
+@app.route(
+    "/<string:provider_name>/<string:env>/commands/<string:identifier>/resize2fs",
+    methods=['POST']
+)
+@auth.login_required
+def resize2fs(provider_name, env, identifier):
+    try:
+        provider = build_provider(provider_name, env)
+        command = provider.commands.resize2fs(identifier)
+    except Exception as e:  # TODO What can get wrong here?
+        print_exc()  # TODO Improve log
+        return response_invalid_request(str(e))
+    return response_ok(command=command)
 
 def _validate_payload(keys):
     data = request.get_json()

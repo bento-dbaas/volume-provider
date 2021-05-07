@@ -1,6 +1,9 @@
 import json
+import logging
 from datetime import datetime
 from time import sleep
+import httplib2
+import google_auth_httplib2
 
 from os import getenv
 from collections import namedtuple
@@ -11,10 +14,13 @@ from googleapiclient.errors import HttpError
 import googleapiclient.discovery
 from google.oauth2 import service_account
 
-from volume_provider.settings import AWS_PROXY, TAG_BACKUP_DBAAS
+from volume_provider.settings import HTTP_PROXY, TAG_BACKUP_DBAAS
 from volume_provider.credentials.gce import CredentialGce, CredentialAddGce
 from volume_provider.providers.base import ProviderBase, CommandsBase
 from volume_provider.clients.team import TeamClient
+
+LOG = logging.getLogger(__name__)
+
 
 class ProviderGce(ProviderBase):
 
@@ -32,13 +38,41 @@ class ProviderGce(ProviderBase):
         service_account_data['private_key'] = service_account_data[
             'private_key'
         ].replace('\\n', '\n')
+
         credentials = service_account.Credentials.from_service_account_info(
-            service_account_data
+            service_account_data,
+            scopes=self.credential.scopes
         )
-        credentials
-        return googleapiclient.discovery.build(
-            'compute', 'v1', credentials=credentials
-        )
+
+        if HTTP_PROXY:
+            _, host, port = HTTP_PROXY.split(':')
+            try:
+                port = int(port)
+            except ValueError:
+                raise EnvironmentError('HTTP_PROXY incorrect format')
+
+            proxied_http = httplib2.Http(proxy_info=httplib2.ProxyInfo(
+                httplib2.socks.PROXY_TYPE_HTTP,
+                host.replace('//', ''),
+                port
+            ))
+
+            authorized_http = google_auth_httplib2.AuthorizedHttp(
+                                credentials,
+                                http=proxied_http)
+
+            service = googleapiclient.discovery.build(
+                        'compute',
+                        'v1',
+                        http=authorized_http)
+        else:
+            service = googleapiclient.discovery.build(
+                'compute',
+                'v1',
+                credentials=credentials,
+            )
+
+        return service
 
     def build_credential(self):
         return CredentialGce(
@@ -62,7 +96,11 @@ class ProviderGce(ProviderBase):
         return [self.get_device_name(x) for x in vol]
 
     def _get_new_disk_name(self, volume):
-        all_disks = self._get_volumes(volume.zone, volume.vm_name, volume.group)
+        all_disks = self._get_volumes(
+            volume.zone,
+            volume.vm_name,
+            volume.group
+        )
         disk_name = "data%s" % (int(all_disks[-1].split("data")[1]) + 1)\
                     if len(all_disks)\
                     else "data1"
@@ -81,7 +119,8 @@ class ProviderGce(ProviderBase):
         }
 
         if snapshot:
-            config['sourceSnapshot'] = "global/snapshots/%s" % (snapshot.description)
+            config['sourceSnapshot'] = "global/snapshots/%s" % \
+                (snapshot.description)
 
         disk_create = self.client.disks().insert(
             project=self.credential.project,
@@ -91,48 +130,52 @@ class ProviderGce(ProviderBase):
 
         volume.identifier = disk_create.get('id')
         volume.resource_id = disk_name
-        volume.path = "/dev/disk/by-id/google-%s" % self.get_device_name(disk_name)
+        volume.path = "/dev/disk/by-id/google-%s" % \
+            self.get_device_name(disk_name)
 
-        return self.__wait_disk_create(volume)
+        return self.wait_operation(
+            zone=volume.zone,
+            operation=disk_create.get('name')
+        )
 
     def _add_access(self, volume, to_address, *args, **kwargs):
         pass
 
-    def __destroy_volume(self, volume, snapshot_offset=0):
+    def __destroy_volume(self, volume):
 
         self._detach_disk(volume)
 
-        snapshots = self.get_snapshots_from(offset=snapshot_offset,**{'volume': volume})
-        for snap in snapshots:
-            self._remove_snapshot(snap)
-            snap.delete()
+        delete_volume = self.client.disks().delete(
+            project=self.credential.project,
+            zone=volume.zone,
+            disk=volume.resource_id
+        ).execute()
 
-        try:
-            self.client.disks().delete(
-                project=self.credential.project,
-                zone=volume.zone,
-                disk=volume.resource_id
-            ).execute()
-        except HttpError:
-            pass
-
-        return True
+        return self.wait_operation(
+            zone=volume.zone,
+            operation=delete_volume.get('name')
+        )
 
     def _resize(self, volume, new_size_kb):
         if new_size_kb <= volume.size_kb:
-            raise EnvironmentError("New size must be greater than current size")
+            raise EnvironmentError(
+                "New size must be greater than current size"
+            )
 
         config = {
             "sizeGb": volume.convert_kb_to_gb(new_size_kb, to_int=True)
         }
-        self.client.disks().resize(
+        disk_resize = self.client.disks().resize(
             project=self.credential.project,
             zone=volume.zone,
             disk=volume.resource_id,
             body=config
         ).execute()
 
-        return True
+        return self.wait_operation(
+            zone=volume.zone,
+            operation=disk_resize.get('name')
+        )
 
     def __verify_none(self, dict_var, key, var):
         if var and key:
@@ -140,7 +183,7 @@ class ProviderGce(ProviderBase):
 
     def __get_snapshot_name(self, volume):
         return "ss-%(volume_name)s-%(timestamp)s" % {
-            'volume_name': volume.resource_id.replace('-',''),
+            'volume_name': volume.resource_id.replace('-', ''),
             'timestamp': datetime.now().strftime('%Y%m%d%H%M%S%f')
         }
 
@@ -153,75 +196,60 @@ class ProviderGce(ProviderBase):
         self.__verify_none(ex_metadata, 'engine', engine)
         self.__verify_none(ex_metadata, 'db_name', db_name)
         self.__verify_none(ex_metadata, 'team', team)
-        self.__verify_none(ex_metadata, TAG_BACKUP_DBAAS.lower() if TAG_BACKUP_DBAAS else None, 1)
-
+        self.__verify_none(
+            ex_metadata,
+            TAG_BACKUP_DBAAS.lower() if TAG_BACKUP_DBAAS else None,
+            1
+        )
         ex_metadata['group'] = volume.group
+
+        snapshot.labels = ex_metadata
+        snapshot.description = snapshot_name
 
         config = {
             'labels': ex_metadata,
-            'name': snapshot_name
+            'name': snapshot_name,
+            "storageLocations": [self.credential.region]
         }
 
-        new_snapshot = self.client.disks().createSnapshot(
+        operation = self.client.disks().createSnapshot(
             project=self.credential.project,
             zone=volume.zone,
             disk=volume.resource_id,
             body=config
         ).execute()
 
-        snapshot.labels = ex_metadata
-        snapshot.identifier = new_snapshot.get('id')
-        snapshot.description = snapshot_name
+        self.wait_operation(
+            zone=volume.zone,
+            operation=operation.get('name')
+        )
 
-        return self.__wait_snapshot_status(snapshot, 'READY')
-
-    def _get_snapshot_status(self, snapshot):
-        return self.client.snapshots().get(
+        snap = self.client.snapshots().get(
             project=self.credential.project,
-            snapshot=snapshot.description
-        ).execute().get('status')
+            snapshot=snapshot_name
+        ).execute()
+
+        snapshot.identifier = snap.get('id')
+        snapshot.size_bytes = snap.get('downloadBytes')
 
     def _remove_snapshot(self, snapshot, *args, **kwrgs):
-        try:
-            self.client.snapshots().delete(
+        oeration = self.client.snapshots().delete(
                 project=self.credential.project,
                 snapshot=snapshot.description
-            ).execute()
-        except Exception as ex:
-            print('Error when delete snapshot', ex)
-
-        return True
+        ).execute()
+        return self.wait_operation(operation=oeration.get('name'))
 
     def _restore_snapshot(self, snapshot, volume):
         return self._create_volume(volume, snapshot=snapshot)
 
-    def _delete_old_volume(self, volume):
-        return self.__destroy_volume(volume, snapshot_offset=1)
-
-    def _delete_volume(self, volume):
-        self.__destroy_volume(volume)
-        self._remove_all_snapshots(volume.group)
-
-        return True
-
-    def _remove_all_snapshots(self, group):
-        snaps = self.client.snapshots().list(
+    def get_disk(self, name, zone, execute_request=True):
+        req = self.client.disks().get(
             project=self.credential.project,
-            filter="labels.group=%s"  % group
-        ).execute().get('items', [])
+            zone=zone,
+            disk=name
+        )
 
-        for ss in snaps:
-            self.client.snapshots().delete(
-                project=self.credential.project,
-                snapshot=ss.get('name')
-            ).execute()
-
-    def get_disk(self, volume):
-        return self.client.disks().get(
-            project=self.credential.project,
-            zone=volume.zone,
-            disk=volume.resource_id
-        ).execute()
+        return req if not execute_request else req.execute()
 
     def get_instance_status(self, volume):
         instance = self.client.instances().get(
@@ -236,7 +264,7 @@ class ProviderGce(ProviderBase):
         return disk_name.rsplit("-", 1)[1]
 
     def attach_disk(self, volume):
-        disk = self.get_disk(volume)
+        disk = self.get_disk(volume.resource_id, volume.zone)
 
         config = {
             "source": disk.get('selfLink'),
@@ -244,7 +272,7 @@ class ProviderGce(ProviderBase):
             "autoDelete": True
         }
 
-        self.client\
+        attach_disk = self.client\
             .instances().attachDisk(
                 project=self.credential.project,
                 zone=volume.zone,
@@ -252,29 +280,43 @@ class ProviderGce(ProviderBase):
                 body=config
             ).execute()
 
-        return self.__wait_disk_attach(volume)
+        return self.wait_operation(
+            zone=volume.zone,
+            operation=attach_disk.get('name')
+        )
 
     def _detach_disk(self, volume):
-        '''
-        try:
-            self.client.instances().detachDisk(
-                    project=self.credential.project,
-                    zone=volume.zone,
-                    instance=volume.vm_name,
-                    deviceName=self.get_device_name(volume.resource_id)
-            ).execute()
-        except HttpError:
-            pass
-        else:
-            self.__wait_disk_detach(volume)
-        '''
-        self.client.instances().detachDisk(
+        detach_disk = self.client.instances().detachDisk(
                 project=self.credential.project,
                 zone=volume.zone,
                 instance=volume.vm_name,
                 deviceName=self.get_device_name(volume.resource_id)
         ).execute()
-        self.__wait_disk_detach(volume)
+
+        return self.wait_operation(
+            zone=volume.zone,
+            operation=detach_disk.get('name')
+        )
+
+    def _move_volume(self, volume, zone):
+        if volume.zone == zone:
+            return True
+
+        config = {
+            "targetDisk": "zones/%(zone)s/disks/%(disk_name)s" % {
+                "zone": volume.zone,
+                "disk_name": volume.resource_id
+            },
+            "destinationZone": "zones/%s" % zone
+        }
+        move_volume = self.client.projects().moveDisk(
+            project=self.credential.project,
+            body=config
+        ).execute()
+
+        return self.wait_operation(
+            operation=move_volume.get('name')
+        )
 
     def __wait_instance_status(self, volume, status):
         while self.get_instance_status(volume) != status:
@@ -282,45 +324,13 @@ class ProviderGce(ProviderBase):
 
         return True
 
-    def __wait_disk_detach(self, volume):
-        while self.get_device_name(volume.resource_id) in\
-         self.__get_instance_disks(volume.zone, volume.vm_name):
-            sleep(self.seconds_to_wait)
-
-        return True
-
-    def __wait_disk_create(self, volume):
-        while self.get_disk(volume).get('status') != "READY":
-            sleep(self.seconds_to_wait)
-
-        return True
-
-    def __wait_disk_attach(self, volume):
-        attach = False
-        while not attach:
-            disk = self.get_disk(volume)
-            if not disk.get('lastAttachTimestamp'):
-                sleep(self.seconds_to_wait)
-            else:
-                attach = True
-
-    def __wait_snapshot_status(self, snapshot, status):
-        while self._get_snapshot_status(snapshot) != status:
-            sleep(self.seconds_to_wait)
-
-        return True
-
-    def _delete_old_volume(self, volume):
-        return self.__destroy_volume(volume, snapshot_offset=1)
-
     def _delete_volume(self, volume):
-        self._remove_all_snapshots(volume.group)
         return self.__destroy_volume(volume)
 
     def _remove_all_snapshots(self, group):
         snaps = self.client.snapshots().list(
             project=self.credential.project,
-            filter="labels.group=%s"  % group
+            filter="labels.group=%s" % group
         ).execute().get('items', [])
 
         for ss in snaps:
@@ -332,8 +342,10 @@ class ProviderGce(ProviderBase):
 
 class CommandsGce(CommandsBase):
 
+    _provider = None
+
     def __init__(self, provider):
-        self.provider = provider
+        self._provider = provider
 
     def _mount(self, volume, fstab=True,
                host_vm=None, host_zone=None, *args, **kwargs):
@@ -342,14 +354,17 @@ class CommandsGce(CommandsBase):
         volume.zone = host_zone or volume.zone
         volume.save()
 
-        self.provider.attach_disk(volume)
+        self._provider.attach_disk(volume)
 
         # waiting symlink creation
-        command = """while ! [[ -L "%(disk_path)s" ]];do echo "waiting symlink" && sleep 3; done"""
+        command = """while ! [[ -L "%(disk_path)s" ]];\
+            do echo "waiting symlink" && sleep 3; done"""
 
         # verify if volume is ex4 and create a fs
-        command += """ && formatted=$(blkid -o value -s TYPE %(disk_path)s | grep ext4 | wc -l);"""
-        command += """if [ "$formatted" -eq 0 ]; then  mkfs -t ext4 -F %(disk_path)s;fi"""
+        command += """ && formatted=$(blkid -o value -s TYPE %(disk_path)s \
+            | grep ext4 | wc -l);"""
+        command += """if [ "$formatted" -eq 0 ]; \
+            then  mkfs -t ext4 -F %(disk_path)s;fi"""
 
         # mount disk
         command += " && mount %(disk_path)s %(data_directory)s"
@@ -357,7 +372,6 @@ class CommandsGce(CommandsBase):
             "disk_path": volume.path,
             "data_directory": self.data_directory
         }
-
 
         if fstab:
             command += " && %s" % self.fstab_script(
@@ -371,6 +385,11 @@ class CommandsGce(CommandsBase):
 
     def fstab_script(self, filer_path, mount_path):
         command = "cp /etc/fstab /etc/fstab.bkp"
-        command += " && sed \'/\{mount_path}/d\' /etc/fstab.bkp > /etc/fstab"
-        command += ' && echo "{filer_path}  {mount_path}    ext4 defaults    0   0" >> /etc/fstab'
+        command += """ && sed \'/\{mount_path}/d\' \
+             /etc/fstab.bkp > /etc/fstab"""
+        command += ' && echo "{filer_path}  {mount_path}  \
+              ext4 defaults    0   0" >> /etc/fstab'
         return command.format(mount_path=mount_path, filer_path=filer_path)
+
+    def _resize2fs(self, volume):
+        return "resize2fs {}".format(volume.path)
