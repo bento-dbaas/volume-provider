@@ -1,4 +1,5 @@
 import requests
+from slugify import slugify
 from volume_provider.settings import TEAM_API_URL
 
 
@@ -12,14 +13,25 @@ class TeamClient(object):
     }
 
     @staticmethod
-    def get_by_name(name):
+    def slugify(name):
+        return slugify(
+            name,
+            regex_pattern=r'[^\w\S-]'
+        )
+
+    @classmethod
+    def get_by_name(cls, name):
         res = requests.get(
-            u'{}/{}'.format(TEAM_API_URL, name)
+            u'{}/slug/{}'.format(
+                TeamClient.API_URL,
+                cls.slugify(name)
+            )
         )
 
         if res.ok:
             return res.json()
 
+        # logging.error('time {} nao encontrado'.format(name))
         return {}
 
     @classmethod
