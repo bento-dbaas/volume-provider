@@ -1,7 +1,9 @@
-from logging import info, error
+import os
+from logging import error
 from time import sleep
 from faasclient.client import Client
 from volume_provider.clients.errors import APIError
+from volume_provider.clients.team import TeamClient
 
 
 class FaaSClient(object):
@@ -21,8 +23,8 @@ class FaaSClient(object):
             )
         return self._client
 
-    def execute(self, call, expected_code, *args):
-        status, content = call(*args)
+    def execute(self, call, expected_code, *args, **kw):
+        status, content = call(*args, **kw)
         error("[FaaS] Response from {} with {}: {} - {}".format(
             call, args, status, content
         ))
@@ -30,12 +32,35 @@ class FaaSClient(object):
             raise APIError(status, content)
         return content
 
-    def create_export(self, size_kb, resource_id):
-        return self.execute(self.client.export_create, 201, size_kb, self.credential.category_id, resource_id)
+    def get_team_id(self, team_name):
+        team_id = os.getenv('DBAAS_TEAM_ID')
+        if team_id:
+            return team_id
+        team = TeamClient.get_by_name(team_name)
+        if not team:
+            raise Exception("Team {} not found on tsuru api".format(team_name))
+
+        return team.get('id')
+
+    def create_export(self, size_kb, resource_id, team_name=None):
+        if not team_name:
+            raise Exception("The team name must be passed")
+
+        return self.execute(
+            self.client.export_create,
+            201,
+            size_kb,
+            self.credential.category_id,
+            self.get_team_id(team_name),
+            resource_id
+        )
 
     def delete_export(self, export):
-        return self.execute(self.client.export_force_delete, 200,
-            export.identifier)
+        return self.execute(
+            self.client.export_force_delete,
+            200,
+            export.identifier
+        )
 
     def export_get(self, export):
         return self.execute(
