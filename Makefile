@@ -7,6 +7,9 @@ run:
 test:
 	DBAAS_HTTP_PROXY=;DBAAS_HTTPS_PROXY=;coverage run --source=./ -m unittest discover --start-directory ./volume_provider/tests -p "*.py"
 
+shell:
+	DBAAS_HTTP_PROXY=;DBAAS_HTTPS_PROXY=;PYTHONPATH=. ipython
+
 test_report: test
 	coverage report -m
 
