@@ -353,10 +353,6 @@ class CommandsGce(CommandsBase):
     def _mount(self, volume, fstab=True,
                host_vm=None, host_zone=None, *args, **kwargs):
 
-        volume.vm_name = host_vm or volume.vm_name
-        volume.zone = host_zone or volume.zone
-        volume.save()
-
         self._provider.attach_disk(volume)
 
         # waiting symlink creation
