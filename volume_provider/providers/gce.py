@@ -339,6 +339,9 @@ class ProviderGce(ProviderBase):
                 snapshot=ss.get('name')
             ).execute()
 
+    def _get_snapshot_status(self, snapshot):
+        return "available"
+
 
 class CommandsGce(CommandsBase):
 
