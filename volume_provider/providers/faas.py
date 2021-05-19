@@ -30,7 +30,10 @@ class ProviderFaaS(ProviderBase):
         resource_id = None
         if volume.resource_id and is_uuid4(volume.resource_id):
             resource_id = volume.resource_id
-        export = self.client.create_export(volume.size_kb, resource_id)
+        export = self.client.create_export(
+            volume.size_kb, resource_id,
+            team_name=kw.get('team_name')
+        )
         volume.identifier = str(export['id'])
         volume.resource_id = export['resource_id']
         volume.path = export['full_path']
