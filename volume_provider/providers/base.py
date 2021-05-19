@@ -1,7 +1,10 @@
 from volume_provider.models import Volume, Snapshot
+from datetime import datetime
+from dbaas_base_provider.baseProvider import BaseProvider
 
 
-class BasicProvider(object):
+class BasicProvider(BaseProvider):
+    provider_type = "volume_provider"
 
     @staticmethod
     def load_volume(identifier, search_field="identifier"):
@@ -12,37 +15,10 @@ class BasicProvider(object):
 class ProviderBase(BasicProvider):
 
     def __init__(self, environment, auth_info=None):
-        self.environment = environment
-        self._client = None
-        self._credential = None
-        self._commands = None
-        self.auth_info = auth_info
-
-    @property
-    def client(self):
-        if not self._client:
-            self._client = self.build_client()
-        return self._client
-
-    @property
-    def credential(self):
-        if not self._credential:
-            self._credential = self.build_credential()
-        return self._credential
-
-    def credential_add(self, content):
-        credential_cls = self.get_credential_add()
-        credential = credential_cls(self.provider, self.environment, content)
-        is_valid, error = credential.is_valid()
-        if not is_valid:
-            return False, error
-
-        try:
-            insert = credential.save()
-        except Exception as e:
-            return False, str(e)
-        else:
-            return True, insert.get('_id')
+        super(ProviderBase, self).__init__(
+            environment,
+            auth_info=None
+        )
 
     @property
     def commands(self):
@@ -51,23 +27,6 @@ class ProviderBase(BasicProvider):
         return self._commands
 
     def get_commands(self):
-        raise NotImplementedError
-
-    @property
-    def provider(self):
-        return self.get_provider()
-
-    @classmethod
-    def get_provider(cls):
-        raise NotImplementedError
-
-    def build_client(self):
-        raise NotImplementedError
-
-    def build_credential(self):
-        raise NotImplementedError
-
-    def get_credential_add(self):
         raise NotImplementedError
 
     def create_volume(self, group, size_kb, to_address,
@@ -98,6 +57,17 @@ class ProviderBase(BasicProvider):
     def _delete_volume(self, volume):
         raise NotImplementedError
 
+    def move_volume(self, identifier, zone):
+        volume = self.load_volume(identifier)
+        self._move_volume(volume, zone)
+
+        volume.zone = zone
+        volume.save()
+        return volume
+
+    def _move_volume(self, volume, zone):
+        raise NotImplementedError
+
     def detach_disk(self, identifier):
         volume = self.load_volume(identifier)
         self._detach_disk(volume)
@@ -111,7 +81,10 @@ class ProviderBase(BasicProvider):
         except Volume.DoesNotExist:
             pass
         try:
-            return self.load_volume(identifier_or_path, search_field="path__icontains")
+            return self.load_volume(
+                identifier_or_path,
+                search_field="path__icontains"
+            )
         except Volume.DoesNotExist:
             return None
 
@@ -142,9 +115,12 @@ class ProviderBase(BasicProvider):
         snap = Snapshot.objects(identifier=identifier).get()
         return self._get_snapshot_status(snap)
 
+    def _get_snapshot_status(self, identifier):
+        raise NotImplementedError
+
     def take_snapshot(self, identifier, team, engine, db_name):
         volume = self.load_volume(identifier)
-        snapshot = Snapshot(volume=volume)
+        snapshot = Snapshot(volume=volume, created_at=datetime.now())
         self._take_snapshot(volume, snapshot, team, engine, db_name)
         snapshot.save()
         return snapshot
@@ -177,25 +153,19 @@ class ProviderBase(BasicProvider):
     def _restore_snapshot(self, snapshot, volume):
         raise NotImplementedError
 
-    def delete_old_volume(self, identifier):
-        volume = self.load_volume(identifier)
-        self._delete_old_volume(volume)
-        volume.delete()
-
-    def _delete_old_volume(self, volume):
-        pass
-
     def get_volumes_from(self, **kwargs):
         return Volume.objects.filter(**kwargs).values_list('resource_id')
 
-    def get_snapshots_from(self,offset=0, **kwargs):
+    def get_snapshots_from(self, offset=0, **kwargs):
         snaps = Snapshot.objects.filter(**kwargs)
-        if not snaps: return []
+        if not snaps:
+            return []
         snaps = list(snaps)
         if offset:
             return snaps[:-offset]
 
         return snaps
+
 
 class CommandsBase(BasicProvider):
 
@@ -304,3 +274,14 @@ die_if_error "Error to remove public key dbaas"
 
     def _clean_up(self, volume):
         raise NotImplementedError
+
+    def _copy_files(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def resize2fs(self, identifier):
+        volume = self.load_volume(identifier)
+        return self._resize2fs(volume)
+
+    def _resize2fs(self, volume):
+        return ""
+
