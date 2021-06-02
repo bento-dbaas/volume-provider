@@ -286,6 +286,16 @@ class ProviderGce(ProviderBase):
         )
 
     def _detach_disk(self, volume):
+
+        vm_attached_disks = self.__get_instance_disks(
+            zone=volume.zone,
+            vm_name=volume.vm_name)
+
+        device_name = self.get_device_name(volume.resource_id)
+
+        if device_name not in vm_attached_disks:
+            return
+
         detach_disk = self.client.instances().detachDisk(
                 project=self.credential.project,
                 zone=volume.zone,
