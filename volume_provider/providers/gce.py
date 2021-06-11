@@ -272,6 +272,11 @@ class ProviderGce(ProviderBase):
             "autoDelete": True
         }
 
+        # checks if disk is already attached
+        for user in disk.get('users', []):
+            if user.endswith("/%s" % volume.vm_name):
+                return True
+
         attach_disk = self.client\
             .instances().attachDisk(
                 project=self.credential.project,
@@ -365,14 +370,15 @@ class CommandsGce(CommandsBase):
 
         self._provider.attach_disk(volume)
 
-        # waiting symlink creation
-        command = """while ! [[ -L "%(disk_path)s" ]];\
-            do echo "waiting symlink" && sleep 3; done"""
+        command = """try_loop=0;\
+                     while [[ ! -L %(disk_path)s && $try_loop -lt 30 ]];\
+                     do echo \"waiting symlink\"\
+                     && sleep 3 && try_loop=$((try_loop + 1)); done"""
 
         # verify if volume is ex4 and create a fs
         command += """ && formatted=$(blkid -o value -s TYPE %(disk_path)s \
             | grep ext4 | wc -l);"""
-        command += """if [ "$formatted" -eq 0 ]; \
+        command += """if [ $formatted -eq 0 ]; \
             then  mkfs -t ext4 -F %(disk_path)s;fi"""
 
         # mount disk
