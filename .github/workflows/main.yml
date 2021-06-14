@@ -27,3 +27,10 @@ jobs:
         run: pip install -r requirements_test.txt
       - name: Run Tests
         run: make test
+      - name: Send to codecov
+        uses: codecov/codecov-action@v1
+        with:
+          flags: unittests 
+          name: codecov-umbrella 
+          fail_ci_if_error: true 
+          verbose: true 
