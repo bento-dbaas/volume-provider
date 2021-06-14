@@ -21,15 +21,7 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-      - name: Set up Python 3.7
-        uses: actions/setup-python@v1
-        with:
-          python-version: 3.7
       - name: Install Requirements
         run: pip install -r requirements.txt 
-      - name: Run Migrations
-        run: python manage.py migrate --settings conf.settings-base 
       - name: Run Tests
-        run: |
-          ls globo/templates/ga
-          ./manage.py test --settings conf.settings-base --debug-mode -v 3
+        run: make test_reports
