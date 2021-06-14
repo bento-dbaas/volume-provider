@@ -27,6 +27,5 @@ jobs:
             ${{ runner.os }}-pip-
       - name: Install Requirements
         run: pip install -r requirements_test.txt
-        if: steps.cachepip.outputs.cache-hit != 'true'
       - name: Run Tests
         run: make test
