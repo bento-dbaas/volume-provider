@@ -8,14 +8,9 @@ jobs:
     strategy:
       matrix:
         python-version: [3.6.1]
-    # services:
-    #   mongo:
-    #     uses: supercharge/mongodb-github-action@1.6.0
-    #     ports:
-    #       - 27017:27017
     steps:
       - name: Start MongoDB
-        uses: docker-library/mongo
+        uses: supercharge/mongodb-github-action@1.6.0
         with:
           mongodb-version: "4.4.3"
       - name: Checkout Code
@@ -30,6 +25,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
       - name: Install Requirements
-        run: pip install -r requirements_test.txt 
+        run: pip install -r requirements_.txt 
       - name: Run Tests
         run: make test
