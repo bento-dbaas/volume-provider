@@ -1,0 +1,35 @@
+name: Run Tests
+
+on: [push, pull_request]
+jobs:
+  test:
+    name: Test
+    strategy:
+      matrix:
+        python-version: [3.6.1]
+    services:
+      - mongodb
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - name: Cache dependency
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - name: Set up Python 3.7
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.7
+      - name: Install Requirements
+        run: pip install -r requirements.txt 
+      - name: Run Migrations
+        run: python manage.py migrate --settings conf.settings-base 
+      - name: Run Tests
+        run: |
+          ls globo/templates/ga
+          ./manage.py test --settings conf.settings-base --debug-mode -v 3
