@@ -15,7 +15,7 @@ jobs:
     #       - 27017:27017
     steps:
       - name: Start MongoDB
-        uses: docker-library/mongo@4.4
+        uses: docker-library/mongo
         with:
           mongodb-version: "4.4.3"
       - name: Checkout Code
