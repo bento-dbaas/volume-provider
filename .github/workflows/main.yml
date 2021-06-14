@@ -9,7 +9,10 @@ jobs:
       matrix:
         python-version: [3.6.1]
     services:
-      - mongodb
+      mongo:
+        image: mongodb
+        ports:
+          - 27017:27017
     steps:
       - name: Checkout Code
         uses: actions/checkout@v2
