@@ -10,7 +10,7 @@ jobs:
         python-version: [3.6.1]
     services:
       mongo:
-        image: mongodb
+        uses: supercharge/mongodb-github-action@1.6.0
         ports:
           - 27017:27017
     steps:
