@@ -316,9 +316,14 @@ def remove_snapshot(provider_name, env, identifier):
 )
 @auth.login_required
 def restore_snapshot(provider_name, env, identifier):
+    data = request.get_json() or {}
+    destination_zone = data.get('zone')
+    destination_vm_name = data.get('vm_name')
+
     try:
         provider = build_provider(provider_name, env)
-        volume = provider.restore_snapshot(identifier)
+        volume = provider.restore_snapshot(
+            identifier, destination_zone, destination_vm_name)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))

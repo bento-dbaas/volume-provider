@@ -139,14 +139,14 @@ class ProviderBase(BasicProvider):
     def _remove_snapshot(self, snapshot, force):
         raise NotImplementedError
 
-    def restore_snapshot(self, identifier):
+    def restore_snapshot(self, identifier, zone=None, vm_name=None):
         snapshot = Snapshot.objects(identifier=identifier).get()
         volume = Volume()
         volume.size_kb = snapshot.volume.size_kb
         volume.set_group(snapshot.volume.group)
         volume.owner_address = snapshot.volume.owner_address
-        volume.vm_name = snapshot.volume.vm_name
-        volume.zone = snapshot.volume.zone
+        volume.vm_name = vm_name or snapshot.volume.vm_name
+        volume.zone = zone or snapshot.volume.zone
         self._restore_snapshot(snapshot, volume)
         volume.save()
         return volume
