@@ -142,9 +142,6 @@ class ProviderGce(ProviderBase):
         pass
 
     def __destroy_volume(self, volume):
-
-        self._detach_disk(volume)
-
         delete_volume = self.client.disks().delete(
             project=self.credential.project,
             zone=volume.zone,
@@ -263,7 +260,7 @@ class ProviderGce(ProviderBase):
     def get_device_name(self, disk_name):
         return disk_name.rsplit("-", 1)[1]
 
-    def attach_disk(self, volume):
+    def _attach_disk(self, volume):
         disk = self.get_disk(volume.resource_id, volume.zone)
 
         config = {
@@ -363,7 +360,6 @@ class CommandsGce(CommandsBase):
     def _mount(self, volume, fstab=True,
                host_vm=None, host_zone=None, *args, **kwargs):
 
-        self._provider.attach_disk(volume)
 
         # waiting symlink creation
         command = """while ! [[ -L "%(disk_path)s" ]];\
