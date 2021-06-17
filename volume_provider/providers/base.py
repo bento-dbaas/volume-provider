@@ -76,6 +76,16 @@ class ProviderBase(BasicProvider):
     def _detach_disk(self, volume):
         pass
 
+    def attach_disk(self, identifier, host_vm, host_zone):
+        volume = self.load_volume(identifier)
+        volume.zone = host_zone or volume.zone
+        volume.vm_name = host_vm or volume.vm_name
+        self._attach_disk(volume)
+        volume.save()
+
+    def _attach_disk(self, volume):
+        pass
+
     def get_volume(self, identifier_or_path):
         try:
             return self.load_volume(identifier_or_path)

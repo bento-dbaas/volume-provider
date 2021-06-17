@@ -142,20 +142,6 @@ def delete_volume(provider_name, env, identifier):
     return response_ok()
 
 @app.route(
-    "/<string:provider_name>/<string:env>/detach-disk/<string:identifier>",
-    methods=['POST']
-)
-@auth.login_required
-def detach_disk(provider_name, env, identifier):
-    try:
-        provider = build_provider(provider_name, env)
-        provider.detach_disk(identifier)
-    except Exception as e:  # TODO What can get wrong here?
-        print_exc()  # TODO Improve log
-        return response_invalid_request(str(e))
-    return response_ok()
-
-@app.route(
     "/<string:provider_name>/<string:env>/move/<string:identifier>",
     methods=['POST']
 )
@@ -353,6 +339,44 @@ def command_mount(provider_name, env, identifier):
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
     return response_ok(command=command)
+
+
+@app.route(
+    "/<string:provider_name>/<string:env>/attach/<string:identifier>/",
+    methods=['POST']
+)
+@auth.login_required
+def attach_volume(provider_name, env, identifier):
+    data = request.get_json()
+    host_vm = data.get("host_vm", None)
+    host_zone = data.get("host_zone", None)
+
+    try:
+        provider = build_provider(provider_name, env)
+        provider.attach_disk(
+            identifier,
+            host_vm=host_vm,
+            host_zone=host_zone)
+    except Exception as e:  # TODO What can get wrong here?
+        print_exc()  # TODO Improve log
+        return response_invalid_request(str(e))
+    return response_ok()
+
+@app.route(
+    "/<string:provider_name>/<string:env>/detach/<string:identifier>/",
+    methods=['POST']
+)
+@auth.login_required
+def detach_volume(provider_name, env, identifier):
+    data = request.get_json()
+
+    try:
+        provider = build_provider(provider_name, env)
+        provider.detach_disk(identifier)
+    except Exception as e:  # TODO What can get wrong here?
+        print_exc()  # TODO Improve log
+        return response_invalid_request(str(e))
+    return response_ok()
 
 
 @app.route(
