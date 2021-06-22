@@ -1,8 +1,6 @@
 from recordclass import recordclass
 
 
-HOST_ORIGIN_TAG = {}
-
 FAKE_TAGS = {
     'cliente-id': 'fake_client-id',
     'componente-id': 'fake_component_id',
