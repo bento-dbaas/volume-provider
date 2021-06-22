@@ -67,7 +67,7 @@ class ProviderBase(BasicProvider):
         return volume
 
     def _move_volume(self, volume, zone):
-        raise NotImplementedError
+        pass
 
     def detach_disk(self, identifier):
         volume = self.load_volume(identifier)
