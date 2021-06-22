@@ -1,7 +1,8 @@
 from collections import OrderedDict
 from unittest import TestCase
 from unittest.mock import patch
-from volume_provider.settings import MONGODB_ENDPOINT
+from volume_provider.settings import MONGODB_HOST, MONGODB_PORT, \
+    MONGODB_USER, MONGODB_PWD, MONGODB_ENDPOINT
 from volume_provider.credentials.base import CredentialAdd, CredentialBase
 from volume_provider.tests.test_credentials import CredentialAddFake, CredentialBaseFake, \
     FakeMongoDB
@@ -38,11 +39,17 @@ class TestBaseProvider(TestCase):
         credential = CredentialBase(PROVIDER, ENVIRONMENT)
         self.assertIsNotNone(credential.credential)
         self.assertIsNotNone(credential.db)
-        mongo_client.assert_called_once_with(
-            host=MONGODB_ENDPOINT,
-            document_class=OrderedDict
-        )
-        print("RICK01")
+        if MONGODB_ENDPOINT:
+            mongo_client.assert_called_once_with(
+                host=MONGODB_ENDPOINT,
+                document_class=OrderedDict
+            )
+        else:
+            mongo_client.assert_called_once_with(
+                host=MONGODB_HOST, port=MONGODB_PORT,
+                username=MONGODB_USER, password=MONGODB_PWD,
+                document_class=OrderedDict
+            )
 
     @patch('volume_provider.credentials.base.CredentialAdd.credential')
     def test_delete(self, credential):
