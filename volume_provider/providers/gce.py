@@ -377,17 +377,18 @@ class CommandsGce(CommandsBase):
         command += """if [ $formatted -eq 0 ]; \
             then  mkfs -t ext4 -F %(disk_path)s;fi"""
 
+        if fstab:
+            command += " && %s" % self.fstab_script(
+                                    volume.path,
+                                    self.data_directory)
+
         # mount disk
+        command += " && systemctl daemon-reload "
         command += " && mount %(disk_path)s %(data_directory)s"
         command = command % {
             "disk_path": volume.path,
             "data_directory": self.data_directory
         }
-
-        if fstab:
-            command += " && %s" % self.fstab_script(
-                                    volume.path,
-                                    self.data_directory)
 
         return command
 
@@ -395,7 +396,7 @@ class CommandsGce(CommandsBase):
         return "umount %s" % data_directory
 
     def fstab_script(self, filer_path, mount_path):
-        command = "cp /etc/fstab /etc/fstab.bkp"
+        command = "/usr/bin/cp -f     /etc/fstab /etc/fstab.bkp"
         command += """ && sed \'/\{mount_path}/d\' \
              /etc/fstab.bkp > /etc/fstab"""
         command += ' && echo "{filer_path}  {mount_path}  \
