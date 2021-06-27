@@ -152,6 +152,7 @@ class ProviderGce(ProviderBase):
         except Exception as ex:
             if ex.resp.status == 404:
                 return True
+            raise ex
 
         delete_volume = self.client.disks().delete(
             project=self.credential.project,
