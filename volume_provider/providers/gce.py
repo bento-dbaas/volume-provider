@@ -142,6 +142,17 @@ class ProviderGce(ProviderBase):
         pass
 
     def __destroy_volume(self, volume):
+
+        # Verify if disk is already removed
+        try:
+            self.get_disk(
+                volume.resource_id + "123",
+                volume.zone
+            )
+        except Exception as ex:
+            if ex.resp.status == 404:
+                return True
+
         delete_volume = self.client.disks().delete(
             project=self.credential.project,
             zone=volume.zone,
