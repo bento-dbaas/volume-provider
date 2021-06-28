@@ -3,7 +3,8 @@ from logging import error
 from time import sleep
 from faasclient.client import Client
 from volume_provider.clients.errors import APIError
-from volume_provider.clients.team import TeamClient
+from volume_provider.settings import TEAM_API_URL
+from dbaas_base_provider.team import TeamClient
 
 
 class FaaSClient(object):
@@ -36,11 +37,9 @@ class FaaSClient(object):
         team_id = os.getenv('DBAAS_TEAM_ID')
         if team_id:
             return team_id
+        team = TeamClient(api_url=TEAM_API_URL, team_name=team_name)
         team = TeamClient.get_by_name(team_name)
-        if not team:
-            raise Exception("Team {} not found on tsuru api".format(team_name))
-
-        return team.get('id')
+        return team.team_id
 
     def create_export(self, size_kb, resource_id, team_name=None):
         if not team_name:

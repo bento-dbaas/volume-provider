@@ -4,7 +4,7 @@ from unittest.mock import patch, MagicMock, PropertyMock
 from volume_provider.providers.gce import ProviderGce
 from volume_provider.credentials.gce import CredentialAddGce
 from volume_provider.models import Volume
-from .fakes.gce import FAKE_CREDENTIAL, FAKE_DISK_LIST
+from .fakes.gce import FAKE_CREDENTIAL, FAKE_DISK_LIST, FAKE_TAGS
 from .base import GCPBaseTestCase
 
 import googleapiclient
@@ -78,11 +78,14 @@ class CreateVolumeTestCase(GCPBaseTestCase):
 
     @patch('volume_provider.providers.gce.ProviderGce._get_new_disk_name',
            new=MagicMock(return_value='fake_group-disk2'))
+    @patch('dbaas_base_provider.team.TeamClient.make_labels',
+            new=MagicMock(return_value=FAKE_TAGS))
     def test_create_disk(self, client_mock):
         disk_insert = client_mock().disks().insert().execute
         disk_insert.return_value = {'id': 'disk_id123'}
 
-        created = self.provider._create_volume(self.disk)
+        created = self.provider._create_volume(
+            self.disk, team_name='fake_db_name')
         self.assertTrue(disk_insert.called_once)
         self.assertTrue(created)
         self.assertEqual(self.disk.path, '/dev/disk/by-id/google-disk2')
@@ -155,6 +158,8 @@ class DeleteVolumeTestCase(GCPBaseTestCase):
        new=MagicMock(return_value={'status': 'READY'}))
 @patch('dbaas_base_provider.baseProvider.BaseProvider.wait_operation',
        new=MagicMock(return_value={'status': 'READY'}))
+@patch('dbaas_base_provider.team.TeamClient.make_labels',
+       new=MagicMock(return_value=FAKE_TAGS))
 class SnapshotTestCase(GCPBaseTestCase):
 
     def test_create_snapshot(self, client_mock):
@@ -178,7 +183,9 @@ class SnapshotTestCase(GCPBaseTestCase):
         disk_insert = client_mock().disks().insert().execute
         disk_insert.return_value = {'id': 'disk_id123'}
 
-        created = self.provider._create_volume(self.disk, self.snapshot)
+        created = self.provider._create_volume(
+            self.disk, self.snapshot, team_name='fake_db_name'
+        )
 
         self.assertTrue(created)
 

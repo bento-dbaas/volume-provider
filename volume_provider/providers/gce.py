@@ -17,7 +17,9 @@ from google.oauth2 import service_account
 from volume_provider.settings import HTTP_PROXY, TAG_BACKUP_DBAAS
 from volume_provider.credentials.gce import CredentialGce, CredentialAddGce
 from volume_provider.providers.base import ProviderBase, CommandsBase
-from volume_provider.clients.team import TeamClient
+from volume_provider.settings import TEAM_API_URL
+from dbaas_base_provider.team import TeamClient
+
 
 LOG = logging.getLogger(__name__)
 
@@ -109,13 +111,21 @@ class ProviderGce(ProviderBase):
 
     def _create_volume(self, volume, snapshot=None, *args, **kwargs):
         disk_name = self._get_new_disk_name(volume)
+        team_name = kwargs.get('team_name')
+        if not team_name:
+            raise Exception("The team name must be passed")
+
+        team = TeamClient(api_url=TEAM_API_URL, team_name=team_name)
+        labels = team.make_labels(
+            engine_name=kwargs.get("engine", ''),
+            infra_name=volume.group,
+            database_name=kwargs.get("db_name", '')
+        )
 
         config = {
             'name': disk_name,
             'sizeGb': volume.convert_kb_to_gb(volume.size_kb, to_int=True),
-            'labels': {
-                'group': volume.group
-            }
+            'labels': labels
         }
 
         if snapshot:
@@ -132,6 +142,7 @@ class ProviderGce(ProviderBase):
         volume.resource_id = disk_name
         volume.path = "/dev/disk/by-id/google-%s" % \
             self.get_device_name(disk_name)
+        volume.labels = labels
 
         return self.wait_operation(
             zone=volume.zone,
@@ -199,24 +210,32 @@ class ProviderGce(ProviderBase):
     def _take_snapshot(self, volume, snapshot, team, engine, db_name):
         snapshot_name = self.__get_snapshot_name(volume)
 
-        ex_metadata = {}
-        if team and engine:
-            ex_metadata = TeamClient.make_tags(team, engine)
-        self.__verify_none(ex_metadata, 'engine', engine)
-        self.__verify_none(ex_metadata, 'db_name', db_name)
-        self.__verify_none(ex_metadata, 'team', team)
-        self.__verify_none(
-            ex_metadata,
-            TAG_BACKUP_DBAAS.lower() if TAG_BACKUP_DBAAS else None,
-            1
-        )
-        ex_metadata['group'] = volume.group
+        #ex_metadata = {}
+        #if team and engine:
+        #    ex_metadata = TeamClient.make_tags(team, engine)
+        #self.__verify_none(ex_metadata, 'engine', engine)
+        #self.__verify_none(ex_metadata, 'db_name', db_name)
+        #self.__verify_none(ex_metadata, 'team', team)
+        #self.__verify_none(
+        #    ex_metadata,
+        #    TAG_BACKUP_DBAAS.lower() if TAG_BACKUP_DBAAS else None,
+        #    1
+        #)
+        #ex_metadata['group'] = volume.group
 
-        snapshot.labels = ex_metadata
+        team = TeamClient(api_url=TEAM_API_URL, team_name=team)
+        labels = team.make_labels(
+            engine_name=engine,
+            infra_name=volume.group,
+            database_name=db_name
+        )
+
+        #snapshot.labels = ex_metadata
+        snapshot.labels = labels
         snapshot.description = snapshot_name
 
         config = {
-            'labels': ex_metadata,
+            'labels': labels,
             'name': snapshot_name,
             "storageLocations": [self.credential.region]
         }

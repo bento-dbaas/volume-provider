@@ -13,6 +13,7 @@ class Volume(Document):
     owner_address = StringField(max_length=20, required=True)
     zone = StringField(max_length=200, required=False)
     vm_name = StringField(max_length=200, required=False)
+    labels = DictField(required=False)
     def set_group(self, group):
         self.group = group
         pair = Volume.objects(group=group).first()
