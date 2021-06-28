@@ -142,11 +142,10 @@ class ProviderGce(ProviderBase):
         pass
 
     def __destroy_volume(self, volume):
-
         # Verify if disk is already removed
         try:
             self.get_disk(
-                volume.resource_id + "123",
+                volume.resource_id,
                 volume.zone
             )
         except Exception as ex:
