@@ -325,6 +325,18 @@ class ProviderGce(ProviderBase):
         if volume.zone == zone:
             return True
 
+        # Verify if disk is already moved
+        try:
+            self.get_disk(
+                volume.resource_id,
+                zone
+            )
+        except Exception as ex:
+            if ex.resp.status == 404:
+                pass
+        else:
+            return True
+
         config = {
             "targetDisk": "zones/%(zone)s/disks/%(disk_name)s" % {
                 "zone": volume.zone,
@@ -332,6 +344,7 @@ class ProviderGce(ProviderBase):
             },
             "destinationZone": "zones/%s" % zone
         }
+
         move_volume = self.client.projects().moveDisk(
             project=self.credential.project,
             body=config
