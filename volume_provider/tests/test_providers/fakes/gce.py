@@ -2,12 +2,7 @@ from recordclass import recordclass
 
 
 FAKE_TAGS = {
-    'cliente-id': 'fake_client-id',
-    'componente-id': 'fake_component_id',
-    'consumo-detalhado': True,
-    'equipe-id': 'fake_team_id',
-    'servico-de-negocio-id': 'fake_business_service_id',
-    'sub-componente-id': 'fake_sub_component_id'
+    'db_name': 'fake_db_name'
 }
 
 FAKE_CREDENTIAL = {
@@ -57,9 +52,9 @@ FAKE_CREDENTIAL = {
     "scopes": ["fake_scope"]
     }
 
-FAKE_DISK_OBJ = recordclass('FakeDiskObj', 'id name zone identifier\
-                                           vm_name group convert_kb_to_gb\
-                                           size_kb resource_id path')
+FAKE_DISK_OBJ = recordclass(
+    'FakeDiskObj', 'id name zone identifier vm_name group convert_kb_to_gb\
+    size_kb resource_id path labels' )
 FAKE_SNAP_OBJ = recordclass('FakeSnapshotObj', 'id volume identifier description labels size_bytes')
 
 
@@ -68,7 +63,7 @@ FAKE_DISK = FAKE_DISK_OBJ(
     'fake_zone', 'fake_identifier',
     'fake_vm_name', 'fake_group',
     lambda x,to_int: x/1000/1000, 1024,
-    '0000123', ''
+    '0000123', '', FAKE_TAGS
 )
 
 FAKE_SNAP = FAKE_SNAP_OBJ(

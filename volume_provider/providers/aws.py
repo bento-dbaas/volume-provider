@@ -6,7 +6,8 @@ from libcloud.compute.providers import get_driver
 from volume_provider.settings import HTTP_PROXY, HTTPS_PROXY, TAG_BACKUP_DBAAS
 from volume_provider.credentials.aws import CredentialAWS, CredentialAddAWS
 from volume_provider.providers.base import ProviderBase, CommandsBase
-from volume_provider.clients.team import TeamClient
+from volume_provider.settings import TEAM_API_URL
+from dbaas_base_provider.team import TeamClient
 
 
 STATE_AVAILABLE = 'available'
@@ -129,6 +130,7 @@ class ProviderAWS(ProviderBase):
         )
         volume.identifier = ebs.id
         volume.resource_id = ebs.name
+        volume.labels = labels
         volume.path = self.credential.next_device(volume.owner_address)
 
     def _add_access(self, volume, to_address, *args, **kwargs):
@@ -157,16 +159,23 @@ class ProviderAWS(ProviderBase):
 
     def _take_snapshot(self, volume, snapshot, team, engine, db_name):
         ebs = self.__get_ebs(volume)
-        ex_metadata = {}
-        if team and engine:
-            ex_metadata = TeamClient.make_tags(team, engine)
-        self.__verify_none(ex_metadata, 'engine', engine)
-        self.__verify_none(ex_metadata, 'db_name', db_name)
-        self.__verify_none(ex_metadata, 'team', team)
-        self.__verify_none(ex_metadata, TAG_BACKUP_DBAAS, 1)
+        #ex_metadata = {}
+        #if team and engine:
+        #    ex_metadata = TeamClient.make_tags(team, engine)
+        #self.__verify_none(ex_metadata, 'engine', engine)
+        #self.__verify_none(ex_metadata, 'db_name', db_name)
+        #self.__verify_none(ex_metadata, 'team', team)
+        #self.__verify_none(ex_metadata, TAG_BACKUP_DBAAS, 1)
 
-        new_snapshot = self.client.create_volume_snapshot(ebs,
-                                                          ex_metadata=ex_metadata)
+        team = TeamClient(api_url=TEAM_API_URL, team_name=team)
+        labels = team.make_labels(
+            engine_name=engine,
+            infra_name=volume.group,
+            database_name=db_name
+        )
+        new_snapshot = self.client.create_volume_snapshot(
+            ebs, ex_metadata=labels
+        )
         snapshot.identifier = new_snapshot.id
         snapshot.description = new_snapshot.name
 
