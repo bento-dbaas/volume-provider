@@ -142,6 +142,17 @@ class ProviderGce(ProviderBase):
         pass
 
     def __destroy_volume(self, volume):
+        # Verify if disk is already removed
+        try:
+            self.get_disk(
+                volume.resource_id,
+                volume.zone
+            )
+        except Exception as ex:
+            if ex.resp.status == 404:
+                return True
+            raise ex
+
         delete_volume = self.client.disks().delete(
             project=self.credential.project,
             zone=volume.zone,
@@ -314,6 +325,18 @@ class ProviderGce(ProviderBase):
         if volume.zone == zone:
             return True
 
+        # Verify if disk is already moved
+        try:
+            self.get_disk(
+                volume.resource_id,
+                zone
+            )
+        except Exception as ex:
+            if ex.resp.status == 404:
+                pass
+        else:
+            return True
+
         config = {
             "targetDisk": "zones/%(zone)s/disks/%(disk_name)s" % {
                 "zone": volume.zone,
@@ -321,6 +344,7 @@ class ProviderGce(ProviderBase):
             },
             "destinationZone": "zones/%s" % zone
         }
+
         move_volume = self.client.projects().moveDisk(
             project=self.credential.project,
             body=config
@@ -377,17 +401,18 @@ class CommandsGce(CommandsBase):
         command += """if [ $formatted -eq 0 ]; \
             then  mkfs -t ext4 -F %(disk_path)s;fi"""
 
+        if fstab:
+            command += " && %s" % self.fstab_script(
+                                    volume.path,
+                                    self.data_directory)
+
         # mount disk
+        command += " && systemctl daemon-reload "
         command += " && mount %(disk_path)s %(data_directory)s"
         command = command % {
             "disk_path": volume.path,
             "data_directory": self.data_directory
         }
-
-        if fstab:
-            command += " && %s" % self.fstab_script(
-                                    volume.path,
-                                    self.data_directory)
 
         return command
 
@@ -395,7 +420,7 @@ class CommandsGce(CommandsBase):
         return "umount %s" % data_directory
 
     def fstab_script(self, filer_path, mount_path):
-        command = "cp /etc/fstab /etc/fstab.bkp"
+        command = "/usr/bin/cp -f     /etc/fstab /etc/fstab.bkp"
         command += """ && sed \'/\{mount_path}/d\' \
              /etc/fstab.bkp > /etc/fstab"""
         command += ' && echo "{filer_path}  {mount_path}  \
