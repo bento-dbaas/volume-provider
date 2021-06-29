@@ -31,7 +31,7 @@ class ProviderBase(BasicProvider):
 
     def create_volume(self, group, size_kb, to_address,
                       snapshot_id=None, zone=None, vm_name=None,
-                      team_name=None):
+                      team_name=None, engine=None, db_name=None):
         snapshot = None
         if snapshot_id:
             snapshot = Snapshot.objects(identifier=snapshot_id).get()
@@ -41,7 +41,12 @@ class ProviderBase(BasicProvider):
         volume.zone = zone
         volume.vm_name = vm_name
         volume.owner_address = to_address
-        self._create_volume(volume, snapshot=snapshot, team_name=team_name)
+        self._create_volume(
+            volume, snapshot=snapshot,
+            team_name=team_name,
+            engine=engine,
+            db_name=db_name
+        )
         self._add_access(volume, volume.owner_address)
         volume.save()
 
@@ -149,7 +154,10 @@ class ProviderBase(BasicProvider):
     def _remove_snapshot(self, snapshot, force):
         raise NotImplementedError
 
-    def restore_snapshot(self, identifier, zone=None, vm_name=None):
+    def restore_snapshot(self,
+            identifier, zone=None, vm_name=None,
+            engine=None, team_name=None, db_name=None
+        ):
         snapshot = Snapshot.objects(identifier=identifier).get()
         volume = Volume()
         volume.size_kb = snapshot.volume.size_kb
@@ -157,11 +165,11 @@ class ProviderBase(BasicProvider):
         volume.owner_address = snapshot.volume.owner_address
         volume.vm_name = vm_name or snapshot.volume.vm_name
         volume.zone = zone or snapshot.volume.zone
-        self._restore_snapshot(snapshot, volume)
+        self._restore_snapshot(snapshot, volume, engine, team_name, db_name)
         volume.save()
         return volume
 
-    def _restore_snapshot(self, snapshot, volume):
+    def _restore_snapshot(self, snapshot, volume, engine, team_name, db_name):
         raise NotImplementedError
 
     def get_volumes_from(self, **kwargs):

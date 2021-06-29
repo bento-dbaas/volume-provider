@@ -266,8 +266,14 @@ class ProviderGce(ProviderBase):
         ).execute()
         return self.wait_operation(operation=oeration.get('name'))
 
-    def _restore_snapshot(self, snapshot, volume):
-        return self._create_volume(volume, snapshot=snapshot)
+    def _restore_snapshot(self, snapshot, volume, engine, team_name, db_name):
+        return self._create_volume(
+            volume=volume,
+            snapshot=snapshot,
+            engine=engine,
+            team_name=team_name,
+            db_name=db_name
+        )
 
     def get_disk(self, name, zone, execute_request=True):
         req = self.client.disks().get(

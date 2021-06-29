@@ -199,7 +199,7 @@ class ProviderAWS(ProviderBase):
             return True
         return False
 
-    def _restore_snapshot(self, snapshot, volume):
+    def _restore_snapshot(self, snapshot, volume, engine, team_name, db_name):
         ebs_snapshot = self.__get_snapshot(snapshot)
         self._create_volume(volume, ebs_snapshot)
 

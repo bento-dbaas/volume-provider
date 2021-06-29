@@ -59,7 +59,7 @@ class ProviderFaaS(ProviderBase):
         self.client.delete_snapshot(snapshot.volume, snapshot)
         return True
 
-    def _restore_snapshot(self, snapshot, volume):
+    def _restore_snapshot(self, snapshot, volume, engine, team_name, db_name):
         restore_job = self.client.restore_snapshot(snapshot.volume, snapshot)
         job_result = self.client.wait_for_job_finished(restore_job['job'])
 
@@ -67,7 +67,7 @@ class ProviderFaaS(ProviderBase):
         export = self.client.export_get(volume)
         volume.resource_id = export['resource_id']
         volume.path = job_result['full_path']
-    
+
     def _delete_old_volume(self, volume):
         pass
 
