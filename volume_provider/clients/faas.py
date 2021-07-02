@@ -38,7 +38,6 @@ class FaaSClient(object):
         if team_id:
             return team_id
         team = TeamClient(api_url=TEAM_API_URL, team_name=team_name)
-        team = TeamClient.get_by_name(team_name)
         return team.team_id
 
     def create_export(self, size_kb, resource_id, team_name=None):
