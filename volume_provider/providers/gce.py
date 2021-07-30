@@ -454,3 +454,6 @@ class CommandsGce(CommandsBase):
 
     def _resize2fs(self, volume):
         return "resize2fs {}".format(volume.path)
+
+    def _clean_up(self, volume):
+        return None
