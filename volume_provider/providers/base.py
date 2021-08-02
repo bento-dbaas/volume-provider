@@ -220,6 +220,13 @@ die_if_error()
     def _scp(self, snap, target_ip, target_directory):
         raise NotImplementedError
 
+    def rsync(self, identifier, source_dir, target_ip, target_dir):
+        snap = Snapshot.objects(identifier=identifier).get()
+        return self._rsync(snap, source_dir, target_ip, target_dir)
+
+    def _rsync(self, snap, target_ip, target_directory):
+        raise NotImplementedError
+
     def add_hosts_allow(self, host_ip):
         return self._add_hosts_allow(host_ip)
 
