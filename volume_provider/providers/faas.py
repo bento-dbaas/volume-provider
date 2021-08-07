@@ -134,18 +134,6 @@ die_if_error "Error scp from {snap_dir} to {target_ip}:{target_dir}"
         )
         return script
 
-    def die_if_error_script(self):
-        return """
-die_if_error()
-{
-    local err=$?
-    if [ "$err" != "0" ]; then
-        echo "$*"
-        exit $err
-    fi
-}
-"""
-
     def fstab_script(self, filer_path, mount_path):
         return """
 cp /etc/fstab /etc/fstab.bkp;
