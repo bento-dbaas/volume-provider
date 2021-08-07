@@ -411,6 +411,32 @@ def command_scp_from_snap(provider_name, env, identifier):
     return response_ok(command=command)
 
 
+@app.route(("/<string:provider_name>/<string:env>/"
+            "snapshots/<string:identifier>/commands/rsync"),
+           methods=['GET'])
+@auth.login_required
+def command_rsync_from_snap(provider_name, env, identifier):
+    data = request.get_json()
+    target_ip = data.get("target_ip")
+    target_dir = data.get("target_dir")
+    source_dir = data.get("source_dir")
+
+    if not(target_ip and target_dir and source_dir):
+        return response_invalid_request("Invalid data {}".format(data))
+    try:
+        provider = build_provider(provider_name, env)
+        command = provider.commands.rsync(
+            identifier,
+            source_dir,
+            target_ip,
+            target_dir
+        )
+    except Exception as e:  # TODO What can get wrong here?
+        print_exc()  # TODO Improve log
+        return response_invalid_request(str(e))
+    return response_ok(command=command)
+
+
 @app.route(
     "/<string:provider_name>/<string:env>/commands/create_pub_key",
     methods=['GET']
