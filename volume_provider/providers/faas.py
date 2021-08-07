@@ -102,6 +102,12 @@ class CommandsFaaS(CommandsBase):
         )
         return script
 
+    def scp_script(self, **kw):
+        return """
+scp -i "/root/.ssh/dbaas.key" -Crp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null {source_dir}/.snapshot/{snap_dir}/* root@{target_ip}:{target_dir}
+die_if_error "Error scp from {snap_dir} to {target_ip}:{target_dir}"
+""".format(**kw)
+
     def _rsync(self, snap, source_dir, target_ip, target_dir):
         script = self.die_if_error_script()
         script += self.rsync_script(
@@ -112,15 +118,9 @@ class CommandsFaaS(CommandsBase):
         )
         return script
 
-    def scp_script(self, **kw):
+    def rsync_script(self, **kw):
         return """
 rsync -e 'ssh -i "/root/.ssh/dbaas.key" -Crp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -az --compression-level=1 {source_dir}/.snapshot/{snap_dir}/* root@{target_ip}:{target_dir}
-die_if_error "Error scp from {snap_dir} to {target_ip}:{target_dir}"
-""".format(**kw)
-
-    def scp_script(self, **kw):
-        return """
-scp -i "/root/.ssh/dbaas.key" -Crp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null {source_dir}/.snapshot/{snap_dir}/* root@{target_ip}:{target_dir}
 die_if_error "Error scp from {snap_dir} to {target_ip}:{target_dir}"
 """.format(**kw)
 
