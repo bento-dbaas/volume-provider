@@ -108,6 +108,22 @@ scp -i "/root/.ssh/dbaas.key" -Crp -o StrictHostKeyChecking=no -o UserKnownHosts
 die_if_error "Error scp from {snap_dir} to {target_ip}:{target_dir}"
 """.format(**kw)
 
+    def _rsync(self, snap, source_dir, target_ip, target_dir):
+        script = self.die_if_error_script()
+        script += self.rsync_script(
+            snap_dir=snap.description,
+            source_dir=source_dir,
+            target_ip=target_ip,
+            target_dir=target_dir
+        )
+        return script
+
+    def rsync_script(self, **kw):
+        return """
+rsync -e "ssh -i /root/.ssh/dbaas.key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"  -aog {source_dir}/.snapshot/{snap_dir}/* root@{target_ip}:{target_dir}
+die_if_error "Error rsync from {snap_dir} to {target_ip}:{target_dir}"
+""".format(**kw)
+
     def _mount(self, volume, fstab=True, *args, **kwargs):
         script = self.die_if_error_script()
         if fstab:
@@ -117,18 +133,6 @@ die_if_error "Error scp from {snap_dir} to {target_ip}:{target_dir}"
             filer_path=volume.path if not fstab else ''
         )
         return script
-
-    def die_if_error_script(self):
-        return """
-die_if_error()
-{
-    local err=$?
-    if [ "$err" != "0" ]; then
-        echo "$*"
-        exit $err
-    fi
-}
-"""
 
     def fstab_script(self, filer_path, mount_path):
         return """
