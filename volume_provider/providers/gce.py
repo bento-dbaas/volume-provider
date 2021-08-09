@@ -103,8 +103,13 @@ class ProviderGce(ProviderBase):
             volume.vm_name,
             volume.group
         )
-        disk_name = "data%s" % (int(all_disks[-1].split("data")[1]) + 1)\
-                    if len(all_disks)\
+        all_disks_name_data = []
+        for disk in all_disks:
+            if 'data' in disk:
+                all_disks_name_data.append(disk)
+
+        disk_name = "data%s" % (int(all_disks_name_data[-1].split("data")[1]) + 1)\
+                    if len(all_disks_name_data)\
                     else "data1"
 
         return "%s-%s" % (volume.group, disk_name)
