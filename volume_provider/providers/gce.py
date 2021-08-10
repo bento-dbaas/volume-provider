@@ -132,11 +132,25 @@ class ProviderGce(ProviderBase):
             config['sourceSnapshot'] = "global/snapshots/%s" % \
                 (snapshot.description)
 
-        disk_create = self.client.disks().insert(
+        disk_create = self.get_or_none_resource(
+            self.client.disks,
             project=self.credential.project,
             zone=volume.zone,
-            body=config
-        ).execute()
+            disk=disk_name
+        )
+        ready = True
+
+        if disk_create is None:
+            disk_create = self.client.disks().insert(
+                project=self.credential.project,
+                zone=volume.zone,
+                body=config
+            ).execute()
+
+            ready = self.wait_operation(
+                zone=volume.zone,
+                operation=disk_create.get('name')
+            )
 
         volume.identifier = disk_create.get('id')
         volume.resource_id = disk_name
@@ -144,25 +158,22 @@ class ProviderGce(ProviderBase):
             self.get_device_name(disk_name)
         volume.labels = labels
 
-        return self.wait_operation(
-            zone=volume.zone,
-            operation=disk_create.get('name')
-        )
+        return ready
 
     def _add_access(self, volume, to_address, *args, **kwargs):
         pass
 
     def __destroy_volume(self, volume):
         # Verify if disk is already removed
-        try:
-            self.get_disk(
-                volume.resource_id,
-                volume.zone
-            )
-        except Exception as ex:
-            if ex.resp.status == 404:
-                return True
-            raise ex
+        disk_create = self.get_or_none_resource(
+            self.client.disks,
+            project=self.credential.project,
+            zone=volume.zone,
+            disk=volume.resource_id
+        )
+
+        if disk_create is not None:
+            return True
 
         delete_volume = self.client.disks().delete(
             project=self.credential.project,
@@ -233,38 +244,55 @@ class ProviderGce(ProviderBase):
         snapshot.labels = labels
         snapshot.description = snapshot_name
 
-        config = {
-            'labels': labels,
-            'name': snapshot_name,
-            "storageLocations": [self.credential.region]
-        }
-
-        operation = self.client.disks().createSnapshot(
-            project=self.credential.project,
-            zone=volume.zone,
-            disk=volume.resource_id,
-            body=config
-        ).execute()
-
-        self.wait_operation(
-            zone=volume.zone,
-            operation=operation.get('name')
-        )
-
-        snap = self.client.snapshots().get(
+        snap = self.get_or_none_resource(
+            self.client.snapshots,
             project=self.credential.project,
             snapshot=snapshot_name
-        ).execute()
+        )
+
+        if snap is None:
+            config = {
+                'labels': labels,
+                'name': snapshot_name,
+                "storageLocations": [self.credential.region]
+            }
+
+            operation = self.client.disks().createSnapshot(
+                project=self.credential.project,
+                zone=volume.zone,
+                disk=volume.resource_id,
+                body=config
+            ).execute()
+
+            self.wait_operation(
+                zone=volume.zone,
+                operation=operation.get('name')
+            )
+
+            snap = self.client.snapshots().get(
+                project=self.credential.project,
+                snapshot=snapshot_name
+            ).execute()
 
         snapshot.identifier = snap.get('id')
         snapshot.size_bytes = snap.get('downloadBytes')
 
     def _remove_snapshot(self, snapshot, *args, **kwrgs):
-        oeration = self.client.snapshots().delete(
+        operation = self.get_or_none_resource(
+            self.client.snapshots,
+            project=self.credential.project,
+            snapshot=snapshot.description
+        )
+
+        if operation is None:
+            return True
+
+        operation = self.client.snapshots().delete(
                 project=self.credential.project,
                 snapshot=snapshot.description
         ).execute()
-        return self.wait_operation(operation=oeration.get('name'))
+
+        return self.wait_operation(operation=operation.get('name'))
 
     def _restore_snapshot(self, snapshot, volume, engine, team_name, db_name):
         return self._create_volume(
@@ -351,15 +379,14 @@ class ProviderGce(ProviderBase):
             return True
 
         # Verify if disk is already moved
-        try:
-            self.get_disk(
-                volume.resource_id,
-                zone
-            )
-        except Exception as ex:
-            if ex.resp.status == 404:
-                pass
-        else:
+        disk = self.get_or_none_resource(
+            self.client.disks,
+            project=self.credential.project,
+            disk=volume.resource_id,
+            zone=zone
+        )
+
+        if disk is not None:
             return True
 
         config = {
