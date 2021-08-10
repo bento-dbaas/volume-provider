@@ -76,6 +76,8 @@ class CreateVolumeTestCase(GCPBaseTestCase):
         disk_name = self.provider._get_new_disk_name(self.disk)
         self.assertEqual(disk_name, 'fake_group-data1')
 
+    @patch('dbaas_base_provider.baseProvider.BaseProvider.get_or_none_resource',
+           new=MagicMock(return_value=None))
     @patch('volume_provider.providers.gce.ProviderGce._get_new_disk_name',
            new=MagicMock(return_value='fake_group-disk2'))
     @patch('dbaas_base_provider.team.TeamClient.make_labels',
@@ -162,6 +164,8 @@ class DeleteVolumeTestCase(GCPBaseTestCase):
        new=MagicMock(return_value=FAKE_TAGS))
 class SnapshotTestCase(GCPBaseTestCase):
 
+    @patch('dbaas_base_provider.baseProvider.BaseProvider.get_or_none_resource',
+           new=MagicMock(return_value=None))
     def test_create_snapshot(self, client_mock):
         take_snap = client_mock().disks().createSnapshot().execute
         get_snaps = client_mock().snapshots().get().execute
@@ -189,6 +193,8 @@ class SnapshotTestCase(GCPBaseTestCase):
 
         self.assertTrue(created)
 
+    @patch('dbaas_base_provider.baseProvider.BaseProvider.get_or_none_resource',
+           new=MagicMock(return_value={}))
     def test_delete_snapshot(self, client_mock):
         delete_snap = client_mock().snapshots().delete().execute
 
