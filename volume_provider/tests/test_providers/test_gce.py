@@ -224,3 +224,40 @@ class MoveDiskTestCase(GCPBaseTestCase):
 
         self.assertTrue(moved)
         self.assertFalse(disk_move.called)
+
+
+@patch('dbaas_base_provider.baseProvider.BaseProvider.get_or_none_resource')
+@patch('volume_provider.providers.gce.ProviderGce.build_client')
+@patch('dbaas_base_provider.baseProvider.BaseProvider.get_or_none_resource',
+       new=MagicMock(return_value=None))
+@patch('volume_provider.providers.gce.CredentialGce.get_content',
+       new=MagicMock(return_value=FAKE_CREDENTIAL))
+@patch('dbaas_base_provider.baseProvider.BaseProvider.wait_operation',
+       new=MagicMock(return_value={'status': 'READY'}))
+@patch('dbaas_base_provider.team.TeamClient.make_labels',
+       new=MagicMock(return_value=FAKE_TAGS))
+class GetOrNoneResourceCalled(GCPBaseTestCase):
+
+    def test_get_or_none_on_move_disk(self, client_mock, get_or_none):
+        self.provider._move_volume(self.disk, 'zone1')
+        self.assertTrue(get_or_none.called)
+
+    def test_get_or_none_on_delete_disk(self, client_mock, get_or_none):
+        self.provider._delete_volume(self.disk)
+        self.assertTrue(get_or_none.called)
+
+    def test_get_or_none_on_create_snapshot(self, client_mock, get_or_none):
+        take_snap = client_mock().disks().createSnapshot().execute
+        get_snaps = client_mock().snapshots().get().execute
+
+        take_snap.return_value = {'id': 'idtest'}
+        get_snaps.return_value = {'id': 'newid'}
+        self.provider._take_snapshot(self.disk, self.snapshot,
+                                     'fake_team',
+                                     'fake_engine',
+                                     'fake_db_name')
+        self.assertTrue(get_or_none.called)
+
+    def test_get_or_none_on_delete_snapshot(self, client_mock, get_or_none):
+        self.provider._remove_snapshot(self.snapshot)
+        self.assertTrue(get_or_none.called)
