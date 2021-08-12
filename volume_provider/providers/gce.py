@@ -177,7 +177,7 @@ class ProviderGce(ProviderBase):
             disk=volume.resource_id
         )
 
-        if disk_create is not None:
+        if disk_create is None:
             return True
 
         delete_volume = self.client.disks().delete(
