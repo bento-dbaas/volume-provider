@@ -123,27 +123,27 @@ class ResizeVolumeTestCase(GCPBaseTestCase):
 @patch('dbaas_base_provider.baseProvider.BaseProvider.wait_operation',
        new=MagicMock(return_value={'status': 'READY'}))
 class DeleteVolumeTestCase(GCPBaseTestCase):
+
+    @patch(
+        'dbaas_base_provider.baseProvider.BaseProvider.get_or_none_resource',
+        new=MagicMock(return_value=None))
+    def test_disk_already_removed(self, client_mock):
+        disk_delete = client_mock().disks().delete().execute
+        disk_detach = client_mock().instances().detachDisk().execute
+
+        deleted = self.provider._delete_volume(self.disk)
+
+        self.assertFalse(disk_delete.called)
+        self.assertTrue(deleted)
+
     def test_delete_disk(self, client_mock):
         disk_delete = client_mock().disks().delete().execute
         disk_detach = client_mock().instances().detachDisk().execute
-        snapshots_list = client_mock().snapshots().list().execute
-
-        snapshots_list.return_value = {
-            'items': [
-                {
-                    'name': 'test 123'
-                },
-                {
-                    'name': 'test 456'
-                }
-            ]
-        }
 
         deleted = self.provider._delete_volume(self.disk)
 
         self.assertTrue(disk_delete.called_once)
         self.assertTrue(disk_detach.called_once)
-        self.assertTrue(snapshots_list.called_once)
         self.assertTrue(deleted)
 
 
