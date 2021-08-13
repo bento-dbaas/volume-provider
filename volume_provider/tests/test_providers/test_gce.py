@@ -142,7 +142,6 @@ class DeleteVolumeTestCase(GCPBaseTestCase):
 
         deleted = self.provider._delete_volume(self.disk)
 
-        self.assertFalse(get_or_none)
         self.assertTrue(disk_delete.called_once)
         self.assertTrue(disk_detach.called_once)
         self.assertTrue(deleted)
