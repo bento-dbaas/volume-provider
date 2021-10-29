@@ -120,7 +120,7 @@ die_if_error "Error scp from {snap_dir} to {target_ip}:{target_dir}"
 
     def rsync_script(self, **kw):
         return """
-rsync -e "ssh -i /root/.ssh/dbaas.key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"  -aog {source_dir}/.snapshot/{snap_dir}/* root@{target_ip}:{target_dir}
+rsync -e "ssh -i /root/.ssh/dbaas.key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"  -aog {source_dir}/.snapshot/{snap_dir}/* root@{target_ip}:{target_dir} &
 die_if_error "Error rsync from {snap_dir} to {target_ip}:{target_dir}"
 """.format(**kw)
 
