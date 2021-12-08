@@ -3,20 +3,24 @@ import logging
 from traceback import print_exc
 from bson import json_util
 from flask import Flask, request, jsonify, make_response
+from raven.contrib.flask import Sentry
 from flask_cors import CORS
 from flask_httpauth import HTTPBasicAuth
 from mongoengine import connect
 from volume_provider.settings import APP_USERNAME, APP_PASSWORD, \
-    MONGODB_PARAMS, MONGODB_DB, LOGGING_LEVEL
+    MONGODB_PARAMS, MONGODB_DB, LOGGING_LEVEL, SENTRY_DSN
 from volume_provider.providers import get_provider_to
 
 
 app = Flask(__name__)
 auth = HTTPBasicAuth()
 cors = CORS(app)
+
+if SENTRY_DSN:
+    sentry = Sentry(app, dsn=SENTRY_DSN)
+
 connect(MONGODB_DB, **MONGODB_PARAMS)
 logging.basicConfig(level=LOGGING_LEVEL)
-
 
 @auth.verify_password
 def verify_password(username, password):

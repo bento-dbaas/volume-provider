@@ -28,3 +28,4 @@ TEAM_API_URL = getenv("TEAM_API_URL", None)
 
 TAG_BACKUP_DBAAS = getenv("TAG_BACKUP_DBAAS", None)
 LOGGING_LEVEL = int(getenv('LOGGING_LEVEL', logging.INFO))
+SENTRY_DSN = getenv("SENTRY_DSN", None)
