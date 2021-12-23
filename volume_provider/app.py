@@ -530,6 +530,23 @@ def cleanup(provider_name, env, identifier):
     return response_ok(command=command)
 
 
+# this route only checks if environment must create other
+# disk to migrate
+@app.route(
+    "/<string:provider_name>/<string:env>/new-disk-migration",
+    methods=['GET']
+)
+@auth.login_required
+def new_disk_with_migration(provider_name, env):
+    try:
+        provider = build_provider(provider_name, env)
+        should_create = provider.new_disk_with_migration()
+    except Exception as e:  # TODO What can get wrong here?
+        print_exc()  # TODO Improve log
+        return response_invalid_request(str(e))
+    return response_ok(create_new_disk=should_create)
+
+
 @app.route(
     "/<string:provider_name>/<string:env>/commands/<string:identifier>/resize2fs",
     methods=['POST']

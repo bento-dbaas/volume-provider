@@ -185,6 +185,12 @@ class ProviderBase(BasicProvider):
 
         return snaps
 
+    def new_disk_with_migration(self):
+        return self._new_disk_with_migration()
+
+    def _new_disk_with_migration(self):
+        return False
+
 
 class CommandsBase(BasicProvider):
 
@@ -224,7 +230,7 @@ die_if_error()
         snap = Snapshot.objects(identifier=identifier).get()
         return self._rsync(snap, source_dir, target_ip, target_dir)
 
-    def _rsync(self, snap, target_ip, target_directory):
+    def _rsync(self, *args, **kwargs):
         raise NotImplementedError
 
     def add_hosts_allow(self, host_ip):

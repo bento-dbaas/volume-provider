@@ -435,6 +435,9 @@ class ProviderGce(ProviderBase):
     def _get_snapshot_status(self, snapshot):
         return "available"
 
+    def _new_disk_with_migration(self):
+        return True
+
 
 class CommandsGce(CommandsBase):
 
@@ -465,6 +468,7 @@ class CommandsGce(CommandsBase):
 
         # mount disk
         command += " && systemctl daemon-reload "
+        command += " && mkdir -p %(data_directory)s"
         command += " && mount %(disk_path)s %(data_directory)s"
         command = command % {
             "disk_path": volume.path,
@@ -489,3 +493,19 @@ class CommandsGce(CommandsBase):
 
     def _clean_up(self, volume):
         return None
+
+    def _rsync(self, snap, source_dir, target_ip, target_dir):
+        script = self.die_if_error_script()
+        script += self.rsync_script(
+            snap_dir=snap.description,
+            source_dir=source_dir,
+            target_ip=target_ip,
+            target_dir=target_dir
+        )
+        return script
+
+    def rsync_script(self, **kw):
+        return """
+            rsync -e "ssh -i /root/.ssh/dbaas.key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"  -aog {source_dir}/.snapshot/{snap_dir}/* root@{target_ip}:{target_dir} &
+            die_if_error "Error rsync from {snap_dir} to {target_ip}:{target_dir}"
+            """.format(**kw)
