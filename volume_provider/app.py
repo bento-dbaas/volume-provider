@@ -10,7 +10,7 @@ from mongoengine import connect
 from volume_provider.settings import APP_USERNAME, APP_PASSWORD, \
     MONGODB_PARAMS, MONGODB_DB, LOGGING_LEVEL, SENTRY_DSN
 from volume_provider.providers import get_provider_to
-
+from dbaas_base_provider.log import log_this
 
 app = Flask(__name__)
 auth = HTTPBasicAuth()
@@ -40,6 +40,7 @@ def build_provider(provider_name, env):
     "/<string:provider_name>/<string:env>/credential/new", methods=['POST']
 )
 @auth.login_required
+@log_this
 def create_credential(provider_name, env):
     data = request.get_json()
     try:
@@ -58,6 +59,7 @@ def create_credential(provider_name, env):
     "/<string:provider_name>/credentials", methods=['GET']
 )
 @auth.login_required
+@log_this
 def get_all_credential(provider_name):
     try:
         provider = build_provider(provider_name, None)
@@ -76,6 +78,7 @@ def get_all_credential(provider_name):
     "/<string:provider_name>/<string:env>/credential", methods=['GET']
 )
 @auth.login_required
+@log_this
 def get_credential(provider_name, env):
     try:
         provider = build_provider(provider_name, env)
@@ -91,6 +94,7 @@ def get_credential(provider_name, env):
 
 @app.route("/<string:provider_name>/<string:env>/credential", methods=['PUT'])
 @auth.login_required
+@log_this
 def update_credential(provider_name, env):
     return create_credential(provider_name, env)
 
@@ -99,6 +103,7 @@ def update_credential(provider_name, env):
     "/<string:provider_name>/<string:env>/credential", methods=['DELETE']
 )
 @auth.login_required
+@log_this
 def destroy_credential(provider_name, env):
     try:
         provider = build_provider(provider_name, env)
@@ -114,6 +119,7 @@ def destroy_credential(provider_name, env):
 
 @app.route("/<string:provider_name>/<string:env>/volume/new", methods=['POST'])
 @auth.login_required
+@log_this
 def create_volume(provider_name, env):
     data = request.get_json()
     group = data.get("group", None)
@@ -136,6 +142,7 @@ def create_volume(provider_name, env):
     methods=['DELETE']
 )
 @auth.login_required
+@log_this
 def delete_volume(provider_name, env, identifier):
     try:
         provider = build_provider(provider_name, env)
@@ -150,6 +157,7 @@ def delete_volume(provider_name, env, identifier):
     methods=['POST']
 )
 @auth.login_required
+@log_this
 def move_volume(provider_name, env, identifier):
     data = request.get_json()
     zone = data.get('zone')
@@ -170,6 +178,7 @@ def move_volume(provider_name, env, identifier):
     methods=['GET']
 )
 @auth.login_required
+@log_this
 def get_volume(provider_name, env, identifier_or_path):
     try:
         provider = build_provider(provider_name, env)
@@ -188,6 +197,7 @@ def get_volume(provider_name, env, identifier_or_path):
     methods=['POST']
 )
 @auth.login_required
+@log_this
 def add_volume_access(provider_name, env, identifier):
     data = request.get_json()
     to_address = data.get("to_address", None)
@@ -210,6 +220,7 @@ def add_volume_access(provider_name, env, identifier):
     methods=['DELETE']
 )
 @auth.login_required
+@log_this
 def remove_volume_access(name, env, identifier, address):
     try:
         provider = build_provider(name, env)
@@ -225,6 +236,7 @@ def remove_volume_access(name, env, identifier, address):
     methods=['POST']
 )
 @auth.login_required
+@log_this
 def resize_volume(provider_name, env, identifier):
     data = request.get_json()
     new_size_kb = data.get("new_size_kb", None)
@@ -246,6 +258,7 @@ def resize_volume(provider_name, env, identifier):
     methods=['POST']
 )
 @auth.login_required
+@log_this
 def take_snapshot(provider_name, env, identifier):
     data = request.get_json()
     engine = data.get("engine", None)
@@ -272,6 +285,7 @@ def take_snapshot(provider_name, env, identifier):
     methods=['GET']
 )
 @auth.login_required
+@log_this
 def get_snapshot_status(provider_name, env, identifier):
     try:
         provider = build_provider(provider_name, env)
@@ -289,6 +303,7 @@ def get_snapshot_status(provider_name, env, identifier):
     methods=['DELETE']
 )
 @auth.login_required
+@log_this
 def remove_snapshot(provider_name, env, identifier):
     force = bool(int(request.args.get('force', '0')))
     try:
@@ -305,6 +320,7 @@ def remove_snapshot(provider_name, env, identifier):
     methods=['POST']
 )
 @auth.login_required
+@log_this
 def restore_snapshot(provider_name, env, identifier):
     data = request.get_json() or {}
     destination_zone = data.get('zone')
@@ -330,6 +346,7 @@ def restore_snapshot(provider_name, env, identifier):
     methods=['POST']
 )
 @auth.login_required
+@log_this
 def command_mount(provider_name, env, identifier):
     data = request.get_json()
     with_fstab = data.get("with_fstab", True)
@@ -355,6 +372,7 @@ def command_mount(provider_name, env, identifier):
     methods=['POST']
 )
 @auth.login_required
+@log_this
 def attach_volume(provider_name, env, identifier):
     data = request.get_json()
     host_vm = data.get("host_vm", None)
@@ -376,6 +394,7 @@ def attach_volume(provider_name, env, identifier):
     methods=['POST']
 )
 @auth.login_required
+@log_this
 def detach_volume(provider_name, env, identifier):
     data = request.get_json()
 
@@ -393,6 +412,7 @@ def detach_volume(provider_name, env, identifier):
     methods=['GET']
 )
 @auth.login_required
+@log_this
 def command_scp_from_snap(provider_name, env, identifier):
     data = request.get_json()
     target_ip = data.get("target_ip")
@@ -419,6 +439,7 @@ def command_scp_from_snap(provider_name, env, identifier):
             "snapshots/<string:identifier>/commands/rsync"),
            methods=['GET'])
 @auth.login_required
+@log_this
 def command_rsync_from_snap(provider_name, env, identifier):
     data = request.get_json()
     target_ip = data.get("target_ip")
@@ -446,6 +467,7 @@ def command_rsync_from_snap(provider_name, env, identifier):
     methods=['GET']
 )
 @auth.login_required
+@log_this
 def command_create_pub_key(provider_name, env):
     keys_must_on_payload = ['host_ip']
     return _command(provider_name, env, 'create_pub_key', keys_must_on_payload)
@@ -456,6 +478,7 @@ def command_create_pub_key(provider_name, env):
     methods=['GET']
 )
 @auth.login_required
+@log_this
 def command_remove_pub_key(provider_name, env):
     keys_must_on_payload = ['host_ip']
     return _command(provider_name, env, 'remove_pub_key', keys_must_on_payload)
@@ -466,6 +489,7 @@ def command_remove_pub_key(provider_name, env):
     methods=['GET']
 )
 @auth.login_required
+@log_this
 def command_add_hosts_allow(provider_name, env):
     return _command_hosts_allow(provider_name, env, 'add_hosts_allow')
 
@@ -475,6 +499,7 @@ def command_add_hosts_allow(provider_name, env):
     methods=['GET']
 )
 @auth.login_required
+@log_this
 def command_remove_hosts_allow(provider_name, env):
     return _command_hosts_allow(provider_name, env, 'remove_hosts_allow')
 
@@ -484,6 +509,7 @@ def command_remove_hosts_allow(provider_name, env):
     methods=['POST']
 )
 @auth.login_required
+@log_this
 def command_copy_files(provider_name, env):
     data = request.get_json()
     try:
@@ -500,6 +526,7 @@ def command_copy_files(provider_name, env):
     methods=['POST']
 )
 @auth.login_required
+@log_this
 def command_umount(provider_name, env, identifier):
     data = request.get_json()
     data_directory = data.get("data_directory", "/data")
@@ -520,6 +547,7 @@ def command_umount(provider_name, env, identifier):
     methods=['GET']
 )
 @auth.login_required
+@log_this
 def cleanup(provider_name, env, identifier):
     try:
         provider = build_provider(provider_name, env)
@@ -535,6 +563,7 @@ def cleanup(provider_name, env, identifier):
     methods=['POST']
 )
 @auth.login_required
+@log_this
 def resize2fs(provider_name, env, identifier):
     try:
         provider = build_provider(provider_name, env)
