@@ -31,7 +31,7 @@ class ProviderBase(BasicProvider):
 
     def create_volume(self, group, size_kb, to_address,
                       snapshot_id=None, zone=None, vm_name=None,
-                      team_name=None, engine=None, db_name=None):
+                      team_name=None, engine=None, db_name=None, disk_offering_type=None):
         snapshot = None
         if snapshot_id:
             snapshot = Snapshot.objects(identifier=snapshot_id).get()
@@ -45,7 +45,8 @@ class ProviderBase(BasicProvider):
             volume, snapshot=snapshot,
             team_name=team_name,
             engine=engine,
-            db_name=db_name
+            db_name=db_name,
+            disk_offering_type=disk_offering_type
         )
         self._add_access(volume, volume.owner_address)
         volume.save()
