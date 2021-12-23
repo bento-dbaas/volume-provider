@@ -7,8 +7,14 @@ from raven.contrib.flask import Sentry
 from flask_cors import CORS
 from flask_httpauth import HTTPBasicAuth
 from mongoengine import connect
-from volume_provider.settings import APP_USERNAME, APP_PASSWORD, \
-    MONGODB_PARAMS, MONGODB_DB, LOGGING_LEVEL, SENTRY_DSN
+from volume_provider.settings import (
+    APP_USERNAME,
+    APP_PASSWORD,
+    MONGODB_PARAMS,
+    MONGODB_DB,
+    LOGGING_LEVEL,
+    SENTRY_DSN,
+)
 from volume_provider.providers import get_provider_to
 from dbaas_base_provider.log import log_this
 
@@ -21,6 +27,7 @@ if SENTRY_DSN:
 
 connect(MONGODB_DB, **MONGODB_PARAMS)
 logging.basicConfig(level=LOGGING_LEVEL)
+
 
 @auth.verify_password
 def verify_password(username, password):
@@ -36,9 +43,7 @@ def build_provider(provider_name, env):
     return provider_cls(env, dict(request.headers))
 
 
-@app.route(
-    "/<string:provider_name>/<string:env>/credential/new", methods=['POST']
-)
+@app.route("/<string:provider_name>/<string:env>/credential/new", methods=["POST"])
 @auth.login_required
 @log_this
 def create_credential(provider_name, env):
@@ -55,9 +60,7 @@ def create_credential(provider_name, env):
     return response_created(success=success, id=str(message))
 
 
-@app.route(
-    "/<string:provider_name>/credentials", methods=['GET']
-)
+@app.route("/<string:provider_name>/credentials", methods=["GET"])
 @auth.login_required
 @log_this
 def get_all_credential(provider_name):
@@ -66,7 +69,7 @@ def get_all_credential(provider_name):
         return make_response(
             json.dumps(
                 list(map(lambda x: x, provider.credential.all())),
-                default=json_util.default
+                default=json_util.default,
             )
         )
     except Exception as e:
@@ -74,9 +77,7 @@ def get_all_credential(provider_name):
         return response_invalid_request(str(e))
 
 
-@app.route(
-    "/<string:provider_name>/<string:env>/credential", methods=['GET']
-)
+@app.route("/<string:provider_name>/<string:env>/credential", methods=["GET"])
 @auth.login_required
 @log_this
 def get_credential(provider_name, env):
@@ -88,20 +89,18 @@ def get_credential(provider_name, env):
         return response_invalid_request(str(e))
 
     if credential.count() == 0:
-        return response_not_found('{}/{}'.format(provider_name, env))
+        return response_not_found("{}/{}".format(provider_name, env))
     return make_response(json.dumps(credential[0], default=json_util.default))
 
 
-@app.route("/<string:provider_name>/<string:env>/credential", methods=['PUT'])
+@app.route("/<string:provider_name>/<string:env>/credential", methods=["PUT"])
 @auth.login_required
 @log_this
 def update_credential(provider_name, env):
     return create_credential(provider_name, env)
 
 
-@app.route(
-    "/<string:provider_name>/<string:env>/credential", methods=['DELETE']
-)
+@app.route("/<string:provider_name>/<string:env>/credential", methods=["DELETE"])
 @auth.login_required
 @log_this
 def destroy_credential(provider_name, env):
@@ -112,12 +111,12 @@ def destroy_credential(provider_name, env):
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
 
-    if deleted['n'] > 0:
+    if deleted["n"] > 0:
         return response_ok()
     return response_not_found("{}-{}".format(provider_name, env))
 
 
-@app.route("/<string:provider_name>/<string:env>/volume/new", methods=['POST'])
+@app.route("/<string:provider_name>/<string:env>/volume/new", methods=["POST"])
 @auth.login_required
 @log_this
 def create_volume(provider_name, env):
@@ -125,7 +124,7 @@ def create_volume(provider_name, env):
     group = data.get("group", None)
     size_kb = data.get("size_kb", None)
 
-    if not(group and size_kb):
+    if not (group and size_kb):
         return response_invalid_request("Invalid data {}".format(data))
 
     try:
@@ -139,7 +138,7 @@ def create_volume(provider_name, env):
 
 @app.route(
     "/<string:provider_name>/<string:env>/volume/<string:identifier>",
-    methods=['DELETE']
+    methods=["DELETE"],
 )
 @auth.login_required
 @log_this
@@ -152,15 +151,15 @@ def delete_volume(provider_name, env, identifier):
         return response_invalid_request(str(e))
     return response_ok()
 
+
 @app.route(
-    "/<string:provider_name>/<string:env>/move/<string:identifier>",
-    methods=['POST']
+    "/<string:provider_name>/<string:env>/move/<string:identifier>", methods=["POST"]
 )
 @auth.login_required
 @log_this
 def move_volume(provider_name, env, identifier):
     data = request.get_json()
-    zone = data.get('zone')
+    zone = data.get("zone")
 
     if not zone:
         return response_invalid_request("Invalid zone")
@@ -175,7 +174,7 @@ def move_volume(provider_name, env, identifier):
 
 @app.route(
     "/<string:provider_name>/<string:env>/volume/<string:identifier_or_path>",
-    methods=['GET']
+    methods=["GET"],
 )
 @auth.login_required
 @log_this
@@ -193,8 +192,7 @@ def get_volume(provider_name, env, identifier_or_path):
 
 
 @app.route(
-    "/<string:provider_name>/<string:env>/access/<string:identifier>",
-    methods=['POST']
+    "/<string:provider_name>/<string:env>/access/<string:identifier>", methods=["POST"]
 )
 @auth.login_required
 @log_this
@@ -217,7 +215,7 @@ def add_volume_access(provider_name, env, identifier):
 
 @app.route(
     "/<string:name>/<string:env>/access/<string:identifier>/<string:address>",
-    methods=['DELETE']
+    methods=["DELETE"],
 )
 @auth.login_required
 @log_this
@@ -232,8 +230,7 @@ def remove_volume_access(name, env, identifier, address):
 
 
 @app.route(
-    "/<string:provider_name>/<string:env>/resize/<string:identifier>",
-    methods=['POST']
+    "/<string:provider_name>/<string:env>/resize/<string:identifier>", methods=["POST"]
 )
 @auth.login_required
 @log_this
@@ -255,7 +252,7 @@ def resize_volume(provider_name, env, identifier):
 
 @app.route(
     "/<string:provider_name>/<string:env>/snapshot/<string:identifier>",
-    methods=['POST']
+    methods=["POST"],
 )
 @auth.login_required
 @log_this
@@ -266,9 +263,7 @@ def take_snapshot(provider_name, env, identifier):
     db_name = data.get("db_name", None)
     try:
         provider = build_provider(provider_name, env)
-        snapshot = provider.take_snapshot(
-            identifier, team_name, engine, db_name
-        )
+        snapshot = provider.take_snapshot(identifier, team_name, engine, db_name)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
@@ -276,13 +271,13 @@ def take_snapshot(provider_name, env, identifier):
         identifier=snapshot.identifier,
         description=snapshot.description,
         volume_path=snapshot.volume.path,
-        size=snapshot.size_bytes
+        size=snapshot.size_bytes,
     )
 
 
 @app.route(
     "/<string:provider_name>/<string:env>/snapshot/<string:identifier>/state",
-    methods=['GET']
+    methods=["GET"],
 )
 @auth.login_required
 @log_this
@@ -293,19 +288,17 @@ def get_snapshot_status(provider_name, env, identifier):
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
-    return response_ok(
-        state=state
-    )
+    return response_ok(state=state)
 
 
 @app.route(
     "/<string:provider_name>/<string:env>/snapshot/<string:identifier>",
-    methods=['DELETE']
+    methods=["DELETE"],
 )
 @auth.login_required
 @log_this
 def remove_snapshot(provider_name, env, identifier):
-    force = bool(int(request.args.get('force', '0')))
+    force = bool(int(request.args.get("force", "0")))
     try:
         provider = build_provider(provider_name, env)
         removed = provider.remove_snapshot(identifier, force)
@@ -317,14 +310,14 @@ def remove_snapshot(provider_name, env, identifier):
 
 @app.route(
     "/<string:provider_name>/<string:env>/snapshot/<string:identifier>/restore",
-    methods=['POST']
+    methods=["POST"],
 )
 @auth.login_required
 @log_this
 def restore_snapshot(provider_name, env, identifier):
     data = request.get_json() or {}
-    destination_zone = data.get('zone')
-    destination_vm_name = data.get('vm_name')
+    destination_zone = data.get("zone")
+    destination_vm_name = data.get("vm_name")
     engine = data.get("engine", None)
     team_name = data.get("team_name", None)
     db_name = data.get("db_name", None)
@@ -332,8 +325,12 @@ def restore_snapshot(provider_name, env, identifier):
     try:
         provider = build_provider(provider_name, env)
         volume = provider.restore_snapshot(
-            identifier, destination_zone, destination_vm_name,
-            engine, team_name, db_name
+            identifier,
+            destination_zone,
+            destination_vm_name,
+            engine,
+            team_name,
+            db_name,
         )
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
@@ -343,7 +340,7 @@ def restore_snapshot(provider_name, env, identifier):
 
 @app.route(
     "/<string:provider_name>/<string:env>/commands/<string:identifier>/mount",
-    methods=['POST']
+    methods=["POST"],
 )
 @auth.login_required
 @log_this
@@ -357,10 +354,9 @@ def command_mount(provider_name, env, identifier):
     try:
         provider = build_provider(provider_name, env)
         provider.commands.data_directory = data_directory
-        command = provider.commands.mount(identifier,
-                                          fstab=with_fstab,
-                                          host_vm=host_vm,
-                                          host_zone=host_zone)
+        command = provider.commands.mount(
+            identifier, fstab=with_fstab, host_vm=host_vm, host_zone=host_zone
+        )
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
@@ -368,8 +364,7 @@ def command_mount(provider_name, env, identifier):
 
 
 @app.route(
-    "/<string:provider_name>/<string:env>/attach/<string:identifier>/",
-    methods=['POST']
+    "/<string:provider_name>/<string:env>/attach/<string:identifier>/", methods=["POST"]
 )
 @auth.login_required
 @log_this
@@ -380,18 +375,15 @@ def attach_volume(provider_name, env, identifier):
 
     try:
         provider = build_provider(provider_name, env)
-        provider.attach_disk(
-            identifier,
-            host_vm=host_vm,
-            host_zone=host_zone)
+        provider.attach_disk(identifier, host_vm=host_vm, host_zone=host_zone)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
     return response_ok()
 
+
 @app.route(
-    "/<string:provider_name>/<string:env>/detach/<string:identifier>/",
-    methods=['POST']
+    "/<string:provider_name>/<string:env>/detach/<string:identifier>/", methods=["POST"]
 )
 @auth.login_required
 @log_this
@@ -409,7 +401,7 @@ def detach_volume(provider_name, env, identifier):
 
 @app.route(
     "/<string:provider_name>/<string:env>/snapshots/<string:identifier>/commands/scp",
-    methods=['GET']
+    methods=["GET"],
 )
 @auth.login_required
 @log_this
@@ -419,25 +411,24 @@ def command_scp_from_snap(provider_name, env, identifier):
     target_dir = data.get("target_dir")
     source_dir = data.get("source_dir")
 
-    if not(target_ip and target_dir and source_dir):
+    if not (target_ip and target_dir and source_dir):
         return response_invalid_request("Invalid data {}".format(data))
     try:
         provider = build_provider(provider_name, env)
-        command = provider.commands.scp(
-            identifier,
-            source_dir,
-            target_ip,
-            target_dir
-        )
+        command = provider.commands.scp(identifier, source_dir, target_ip, target_dir)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
     return response_ok(command=command)
 
 
-@app.route(("/<string:provider_name>/<string:env>/"
-            "snapshots/<string:identifier>/commands/rsync"),
-           methods=['GET'])
+@app.route(
+    (
+        "/<string:provider_name>/<string:env>/"
+        "snapshots/<string:identifier>/commands/rsync"
+    ),
+    methods=["GET"],
+)
 @auth.login_required
 @log_this
 def command_rsync_from_snap(provider_name, env, identifier):
@@ -446,16 +437,11 @@ def command_rsync_from_snap(provider_name, env, identifier):
     target_dir = data.get("target_dir")
     source_dir = data.get("source_dir")
 
-    if not(target_ip and target_dir and source_dir):
+    if not (target_ip and target_dir and source_dir):
         return response_invalid_request("Invalid data {}".format(data))
     try:
         provider = build_provider(provider_name, env)
-        command = provider.commands.rsync(
-            identifier,
-            source_dir,
-            target_ip,
-            target_dir
-        )
+        command = provider.commands.rsync(identifier, source_dir, target_ip, target_dir)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
@@ -463,51 +449,44 @@ def command_rsync_from_snap(provider_name, env, identifier):
 
 
 @app.route(
-    "/<string:provider_name>/<string:env>/commands/create_pub_key",
-    methods=['GET']
+    "/<string:provider_name>/<string:env>/commands/create_pub_key", methods=["GET"]
 )
 @auth.login_required
 @log_this
 def command_create_pub_key(provider_name, env):
-    keys_must_on_payload = ['host_ip']
-    return _command(provider_name, env, 'create_pub_key', keys_must_on_payload)
+    keys_must_on_payload = ["host_ip"]
+    return _command(provider_name, env, "create_pub_key", keys_must_on_payload)
 
 
 @app.route(
-    "/<string:provider_name>/<string:env>/commands/remove_pub_key",
-    methods=['GET']
+    "/<string:provider_name>/<string:env>/commands/remove_pub_key", methods=["GET"]
 )
 @auth.login_required
 @log_this
 def command_remove_pub_key(provider_name, env):
-    keys_must_on_payload = ['host_ip']
-    return _command(provider_name, env, 'remove_pub_key', keys_must_on_payload)
+    keys_must_on_payload = ["host_ip"]
+    return _command(provider_name, env, "remove_pub_key", keys_must_on_payload)
 
 
 @app.route(
-    "/<string:provider_name>/<string:env>/commands/add_hosts_allow",
-    methods=['GET']
+    "/<string:provider_name>/<string:env>/commands/add_hosts_allow", methods=["GET"]
 )
 @auth.login_required
 @log_this
 def command_add_hosts_allow(provider_name, env):
-    return _command_hosts_allow(provider_name, env, 'add_hosts_allow')
+    return _command_hosts_allow(provider_name, env, "add_hosts_allow")
 
 
 @app.route(
-    "/<string:provider_name>/<string:env>/commands/remove_hosts_allow",
-    methods=['GET']
+    "/<string:provider_name>/<string:env>/commands/remove_hosts_allow", methods=["GET"]
 )
 @auth.login_required
 @log_this
 def command_remove_hosts_allow(provider_name, env):
-    return _command_hosts_allow(provider_name, env, 'remove_hosts_allow')
+    return _command_hosts_allow(provider_name, env, "remove_hosts_allow")
 
 
-@app.route(
-    "/<string:provider_name>/<string:env>/commands/copy_files",
-    methods=['POST']
-)
+@app.route("/<string:provider_name>/<string:env>/commands/copy_files", methods=["POST"])
 @auth.login_required
 @log_this
 def command_copy_files(provider_name, env):
@@ -523,7 +502,7 @@ def command_copy_files(provider_name, env):
 
 @app.route(
     "/<string:provider_name>/<string:env>/commands/<string:identifier>/umount",
-    methods=['POST']
+    methods=["POST"],
 )
 @auth.login_required
 @log_this
@@ -532,10 +511,7 @@ def command_umount(provider_name, env, identifier):
     data_directory = data.get("data_directory", "/data")
     try:
         provider = build_provider(provider_name, env)
-        command = provider.commands.umount(
-            identifier,
-            data_directory=data_directory
-        )
+        command = provider.commands.umount(identifier, data_directory=data_directory)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
@@ -544,7 +520,7 @@ def command_umount(provider_name, env, identifier):
 
 @app.route(
     "/<string:provider_name>/<string:env>/commands/<string:identifier>/cleanup",
-    methods=['GET']
+    methods=["GET"],
 )
 @auth.login_required
 @log_this
@@ -560,7 +536,7 @@ def cleanup(provider_name, env, identifier):
 
 @app.route(
     "/<string:provider_name>/<string:env>/commands/<string:identifier>/resize2fs",
-    methods=['POST']
+    methods=["POST"],
 )
 @auth.login_required
 @log_this
@@ -573,6 +549,7 @@ def resize2fs(provider_name, env, identifier):
         return response_invalid_request(str(e))
     return response_ok(command=command)
 
+
 def _validate_payload(keys):
     data = request.get_json()
     data_keys = data.keys()
@@ -581,7 +558,7 @@ def _validate_payload(keys):
 
 def _command(provider_name, env, func_name, keys_must_on_payload):
     is_valid, data = _validate_payload(keys_must_on_payload)
-    if not(is_valid):
+    if not (is_valid):
         return response_invalid_request("Invalid data {}".format(data))
     try:
         provider = build_provider(provider_name, env)
@@ -597,7 +574,7 @@ def _command_hosts_allow(provider_name, env, func_name):
     data = request.get_json()
     host_ip = data.get("host_ip")
 
-    if not(host_ip):
+    if not (host_ip):
         return response_invalid_request("Invalid data {}".format(data))
     try:
         provider = build_provider(provider_name, env)
