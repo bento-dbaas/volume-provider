@@ -14,6 +14,8 @@ class Volume(Document):
     zone = StringField(max_length=200, required=False)
     vm_name = StringField(max_length=200, required=False)
     labels = DictField(required=False)
+    disk_offering_type = StringField(required=False)
+
     def set_group(self, group):
         self.group = group
         pair = Volume.objects(group=group).first()

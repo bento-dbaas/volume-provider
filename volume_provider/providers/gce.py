@@ -496,8 +496,11 @@ class CommandsGce(CommandsBase):
 
     def _rsync(self, snap, source_dir, target_ip, target_dir):
         script = self.die_if_error_script()
+        snap_description = None
+        if snap:
+            snap_description = snap.description
         script += self.rsync_script(
-            snap_dir=snap.description,
+            snap_dir=snap_description,
             source_dir=source_dir,
             target_ip=target_ip,
             target_dir=target_dir
@@ -507,5 +510,5 @@ class CommandsGce(CommandsBase):
     def rsync_script(self, **kw):
         return """
             rsync -e "ssh -i /root/.ssh/dbaas.key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"  -aog {source_dir}/* root@{target_ip}:{target_dir} &
-            die_if_error "Error rsync from {snap_dir} to {target_ip}:{target_dir}"
+            die_if_error "Error rsync from {source_dir} to {target_ip}:{target_dir}"
             """.format(**kw)

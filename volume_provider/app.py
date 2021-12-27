@@ -419,7 +419,7 @@ def command_scp_from_snap(provider_name, env, identifier):
             "snapshots/<string:identifier>/commands/rsync"),
            methods=['GET'])
 @auth.login_required
-def command_rsync_from_snap(provider_name, env, identifier):
+def command_rsync_from_snap(provider_name, env, identifier=None):
     data = request.get_json()
     target_ip = data.get("target_ip")
     target_dir = data.get("target_dir")
@@ -430,7 +430,7 @@ def command_rsync_from_snap(provider_name, env, identifier):
     try:
         provider = build_provider(provider_name, env)
         command = provider.commands.rsync(
-            identifier,
+            identifier if identifier != "-" else None,
             source_dir,
             target_ip,
             target_dir

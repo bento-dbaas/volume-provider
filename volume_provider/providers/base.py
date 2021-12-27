@@ -227,7 +227,9 @@ die_if_error()
         raise NotImplementedError
 
     def rsync(self, identifier, source_dir, target_ip, target_dir):
-        snap = Snapshot.objects(identifier=identifier).get()
+        snap = None
+        if identifier:
+            snap = Snapshot.objects(identifier=identifier).get()
         return self._rsync(snap, source_dir, target_ip, target_dir)
 
     def _rsync(self, *args, **kwargs):
