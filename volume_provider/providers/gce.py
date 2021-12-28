@@ -432,11 +432,11 @@ class ProviderGce(ProviderBase):
                 snapshot=ss.get('name')
             ).execute()
 
-    def _get_snapshot_status(self, snapshot):
-        return "available"
-
     def _new_disk_with_migration(self):
         return True
+
+    def _get_snapshot_status(self, snapshot):
+        return "available"
 
 
 class CommandsGce(CommandsBase):
