@@ -304,13 +304,14 @@ class ProviderGce(ProviderBase):
 
         return self.wait_operation(operation=operation.get('name'))
 
-    def _restore_snapshot(self, snapshot, volume, engine, team_name, db_name):
+    def _restore_snapshot(self, snapshot, volume, engine, team_name, db_name, disk_offering_type):
         return self._create_volume(
             volume=volume,
             snapshot=snapshot,
             engine=engine,
             team_name=team_name,
-            db_name=db_name
+            db_name=db_name,
+            disk_offering_type=disk_offering_type
         )
 
     def get_disk(self, name, zone, execute_request=True):

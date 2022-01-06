@@ -157,7 +157,7 @@ class ProviderBase(BasicProvider):
 
     def restore_snapshot(self,
             identifier, zone=None, vm_name=None,
-            engine=None, team_name=None, db_name=None
+            engine=None, team_name=None, db_name=None, disk_offering_type=None
         ):
         snapshot = Snapshot.objects(identifier=identifier).get()
         volume = Volume()
@@ -166,11 +166,12 @@ class ProviderBase(BasicProvider):
         volume.owner_address = snapshot.volume.owner_address
         volume.vm_name = vm_name or snapshot.volume.vm_name
         volume.zone = zone or snapshot.volume.zone
-        self._restore_snapshot(snapshot, volume, engine, team_name, db_name)
+        volume.disk_offering_type = disk_offering_type
+        self._restore_snapshot(snapshot, volume, engine, team_name, db_name, disk_offering_type)
         volume.save()
         return volume
 
-    def _restore_snapshot(self, snapshot, volume, engine, team_name, db_name):
+    def _restore_snapshot(self, snapshot, volume, engine, team_name, db_name, disk_offering_type):
         raise NotImplementedError
 
     def get_volumes_from(self, **kwargs):
