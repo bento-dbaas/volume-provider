@@ -117,6 +117,7 @@ class ProviderGce(ProviderBase):
     def _create_volume(self, volume, snapshot=None, *args, **kwargs):
         disk_name = self._get_new_disk_name(volume)
         team_name = kwargs.get('team_name')
+        disk_offering_type = kwargs.get("disk_offering_type", None)
         if not team_name:
             raise Exception("The team name must be passed")
 
@@ -130,8 +131,11 @@ class ProviderGce(ProviderBase):
         config = {
             'name': disk_name,
             'sizeGb': volume.convert_kb_to_gb(volume.size_kb, to_int=True),
-            'labels': labels
+            'labels': labels,
         }
+
+        if disk_offering_type:
+            config['type'] = self.build_type_disk_url(disk_offering_type)
 
         if snapshot:
             config['sourceSnapshot'] = "global/snapshots/%s" % \
@@ -162,6 +166,7 @@ class ProviderGce(ProviderBase):
         volume.path = "/dev/disk/by-id/google-%s" % \
             self.get_device_name(disk_name)
         volume.labels = labels
+        volume.disk_offering_type = config['type'] if disk_offering_type else None
 
         return ready
 
@@ -299,13 +304,14 @@ class ProviderGce(ProviderBase):
 
         return self.wait_operation(operation=operation.get('name'))
 
-    def _restore_snapshot(self, snapshot, volume, engine, team_name, db_name):
+    def _restore_snapshot(self, snapshot, volume, engine, team_name, db_name, disk_offering_type):
         return self._create_volume(
             volume=volume,
             snapshot=snapshot,
             engine=engine,
             team_name=team_name,
-            db_name=db_name
+            db_name=db_name,
+            disk_offering_type=disk_offering_type
         )
 
     def get_disk(self, name, zone, execute_request=True):
@@ -434,6 +440,12 @@ class ProviderGce(ProviderBase):
 
     def _get_snapshot_status(self, snapshot):
         return "available"
+
+    def build_type_disk_url(self, disk_type):
+        url = "/projects/{project}/regions/{region}/diskTypes/{disk_type}"
+        return url.format(project=self.credential.project,
+                          region=self.credential.region,
+                          disk_type=disk_type if disk_type is not None else 'pd-standard')
 
 
 class CommandsGce(CommandsBase):

@@ -312,12 +312,13 @@ def restore_snapshot(provider_name, env, identifier):
     engine = data.get("engine", None)
     team_name = data.get("team_name", None)
     db_name = data.get("db_name", None)
+    disk_offering_type = data.get("disk_offering_type", None)
 
     try:
         provider = build_provider(provider_name, env)
         volume = provider.restore_snapshot(
             identifier, destination_zone, destination_vm_name,
-            engine, team_name, db_name
+            engine, team_name, db_name, disk_offering_type
         )
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
