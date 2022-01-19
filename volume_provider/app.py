@@ -321,16 +321,13 @@ def restore_snapshot(provider_name, env, identifier):
     engine = data.get("engine", None)
     team_name = data.get("team_name", None)
     db_name = data.get("db_name", None)
+    disk_offering_type = data.get("disk_offering_type", None)
 
     try:
         provider = build_provider(provider_name, env)
         volume = provider.restore_snapshot(
-            identifier,
-            destination_zone,
-            destination_vm_name,
-            engine,
-            team_name,
-            db_name,
+            identifier, destination_zone, destination_vm_name,
+            engine, team_name, db_name, disk_offering_type
         )
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
@@ -431,7 +428,7 @@ def command_scp_from_snap(provider_name, env, identifier):
 )
 @auth.login_required
 @log_this
-def command_rsync_from_snap(provider_name, env, identifier):
+def command_rsync_from_snap(provider_name, env, identifier=None):
     data = request.get_json()
     target_ip = data.get("target_ip")
     target_dir = data.get("target_dir")
@@ -441,7 +438,12 @@ def command_rsync_from_snap(provider_name, env, identifier):
         return response_invalid_request("Invalid data {}".format(data))
     try:
         provider = build_provider(provider_name, env)
-        command = provider.commands.rsync(identifier, source_dir, target_ip, target_dir)
+        command = provider.commands.rsync(
+            identifier if identifier != "-" else None,
+            source_dir,
+            target_ip,
+            target_dir
+        )
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
@@ -532,6 +534,23 @@ def cleanup(provider_name, env, identifier):
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
     return response_ok(command=command)
+
+
+# this route only checks if environment must create other
+# disk to migrate
+@app.route(
+    "/<string:provider_name>/<string:env>/new-disk-migration",
+    methods=['GET']
+)
+@auth.login_required
+def new_disk_with_migration(provider_name, env):
+    try:
+        provider = build_provider(provider_name, env)
+        should_create = provider.new_disk_with_migration()
+    except Exception as e:  # TODO What can get wrong here?
+        print_exc()  # TODO Improve log
+        return response_invalid_request(str(e))
+    return response_ok(create_new_disk=should_create)
 
 
 @app.route(
