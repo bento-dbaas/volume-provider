@@ -420,7 +420,7 @@ def command_scp_from_snap(provider_name, env, identifier):
             "snapshots/<string:identifier>/commands/rsync"),
            methods=['GET'])
 @auth.login_required
-def command_rsync_from_snap(provider_name, env, identifier):
+def command_rsync_from_snap(provider_name, env, identifier=None):
     data = request.get_json()
     target_ip = data.get("target_ip")
     target_dir = data.get("target_dir")
@@ -431,7 +431,7 @@ def command_rsync_from_snap(provider_name, env, identifier):
     try:
         provider = build_provider(provider_name, env)
         command = provider.commands.rsync(
-            identifier,
+            identifier if identifier != "-" else None,
             source_dir,
             target_ip,
             target_dir
@@ -529,6 +529,23 @@ def cleanup(provider_name, env, identifier):
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
     return response_ok(command=command)
+
+
+# this route only checks if environment must create other
+# disk to migrate
+@app.route(
+    "/<string:provider_name>/<string:env>/new-disk-migration",
+    methods=['GET']
+)
+@auth.login_required
+def new_disk_with_migration(provider_name, env):
+    try:
+        provider = build_provider(provider_name, env)
+        should_create = provider.new_disk_with_migration()
+    except Exception as e:  # TODO What can get wrong here?
+        print_exc()  # TODO Improve log
+        return response_invalid_request(str(e))
+    return response_ok(create_new_disk=should_create)
 
 
 @app.route(
