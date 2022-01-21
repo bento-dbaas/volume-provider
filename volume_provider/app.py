@@ -543,6 +543,7 @@ def cleanup(provider_name, env, identifier):
     methods=['GET']
 )
 @auth.login_required
+@log_this
 def new_disk_with_migration(provider_name, env):
     try:
         provider = build_provider(provider_name, env)
