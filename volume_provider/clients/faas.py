@@ -1,11 +1,13 @@
 import os
-from logging import error
+import logging
 from time import sleep
 from faasclient.client import Client
 from volume_provider.clients.errors import APIError
 from volume_provider.settings import TEAM_API_URL
 from dbaas_base_provider.team import TeamClient
 
+
+LOG = logging.getLogger(__name__)
 
 class FaaSClient(object):
 
@@ -26,7 +28,7 @@ class FaaSClient(object):
 
     def execute(self, call, expected_code, *args, **kw):
         status, content = call(*args, **kw)
-        error("[FaaS] Response from {} with {}: {} - {}".format(
+        LOG.info("[FaaS] Response from {} with {}: {} - {}".format(
             call, args, status, content
         ))
         if status != expected_code:
@@ -73,9 +75,9 @@ class FaaSClient(object):
                 return access
 
     def create_access(self, export, address, access_type=None):
-        error("Check access for {}:{}".format(export.identifier, address))
+        LOG.info("Check access for {}:{}".format(export.identifier, address))
         access = self.check_access_exist(export, address)
-        error("access {}".format(access))
+        LOG.info("access {}".format(access))
         if access:
             return access
         return self.execute(
