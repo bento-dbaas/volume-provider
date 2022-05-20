@@ -17,6 +17,7 @@ from volume_provider.settings import (
 )
 from volume_provider.providers import get_provider_to
 from dbaas_base_provider.log import log_this
+from volume_provider.models import Snapshot
 
 app = Flask(__name__)
 auth = HTTPBasicAuth()
@@ -300,8 +301,12 @@ def get_snapshot_status(provider_name, env, identifier):
 def remove_snapshot(provider_name, env, identifier):
     force = bool(int(request.args.get("force", "0")))
     try:
-        provider = build_provider(provider_name, env)
-        removed = provider.remove_snapshot(identifier, force)
+        snapshot = Snapshot.objects.filter(identifier=identifier)
+        if len(snapshot) > 0:
+            provider = build_provider(provider_name, env)
+            removed = provider.remove_snapshot(identifier, force)
+        else:
+            removed = True
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
