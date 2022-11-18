@@ -610,6 +610,15 @@ def _command_hosts_allow(provider_name, env, func_name):
         return response_invalid_request(str(e))
     return response_ok(command=command)
 
+@app.route('/')
+def default_route():
+    response = "volume-provider, from dbaas/dbdev <br>"
+    try:
+        f = open("./build_info.txt")
+        response += f.readline()
+    except:
+        response += "build_info.txt not found"
+    return response
 
 def response_invalid_request(error, status_code=500):
     return _response(status_code, error=error)
