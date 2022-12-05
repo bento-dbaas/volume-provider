@@ -38,10 +38,21 @@ docker_run:
 docker_stop:
 	docker stop volume_provider
 
+docker_deploy_gcp:
+	@echo "tag usada:${TAG}"
+	make docker_deploy_build TAG=${TAG}
+	make docker_deploy_push TAG=${TAG}
+
 docker_deploy_build: 
 	@echo "tag usada:${TAG}"
 	@echo "exemplo de uso make docker_deploy_build TAG=v1.02"
-	docker build . -t us-east1-docker.pkg.dev/gglobo-dbaas-hub/dbaas-docker-images/volume-provider:${TAG}
+	GIT_BRANCH=$$(git branch --show-current); \
+	GIT_COMMIT=$$(git rev-parse --short HEAD); \
+	DATE=$$(date +"%Y-%M-%d_%T"); \
+	INFO="date:$$DATE  branch:$$GIT_BRANCH  commit:$$GIT_COMMIT"; \
+	docker build . -t us-east1-docker.pkg.dev/gglobo-dbaas-hub/dbaas-docker-images/volume-provider:${TAG} \
+		--label git-commit=$(git rev-parse --short HEAD) \
+		--build-arg build_info="$$INFO"
 
 docker_deploy_push:
 	@echo "tag usada:${TAG}"
