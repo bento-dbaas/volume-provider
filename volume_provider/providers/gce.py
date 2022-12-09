@@ -27,6 +27,7 @@ LOG = logging.getLogger(__name__)
 class ProviderGce(ProviderBase):
 
     seconds_to_wait = 3
+    persisted_day = str(getenv("SNAPSHOTS_PERSIST_DAY", "10")).zfill(2)
 
     def get_commands(self):
         return CommandsGce(self)
@@ -227,6 +228,9 @@ class ProviderGce(ProviderBase):
             'timestamp': datetime.now().strftime('%Y%m%d%H%M%S%f')
         }
 
+    def _verify_persistent_backup_date(self):
+        return datetime.now().strftime('%d').zfill(2) == self.persisted_day
+
     def _take_snapshot(self, volume, snapshot, team, engine, db_name):
         snapshot_name = self.__get_snapshot_name(volume)
 
@@ -250,7 +254,10 @@ class ProviderGce(ProviderBase):
             database_name=db_name
         )
 
-        #snapshot.labels = ex_metadata
+        if self._verify_persistent_backup_date():
+            labels['is_persisted'] = 1
+            labels['persist_month'] = datetime.today().strftime("%Y-%m")
+
         snapshot.labels = labels
         snapshot.description = snapshot_name
 
