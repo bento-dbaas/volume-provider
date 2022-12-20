@@ -4,6 +4,7 @@ from datetime import datetime
 from time import sleep
 import httplib2
 import google_auth_httplib2
+import pytz
 
 from os import getenv
 from collections import namedtuple
@@ -229,7 +230,10 @@ class ProviderGce(ProviderBase):
         }
 
     def _verify_persistent_backup_date(self):
-        return datetime.now().strftime('%d').zfill(2) == self.persisted_day
+        tz = pytz.timezone('America/Sao_Paulo')
+        now = datetime.now(tz)
+        LOG.info('Persisted day: %s - Now: %s', self.persisted_day, now.strftime('%Y-%m-%d %H:%M:%S:%f'))
+        return now.strftime('%d').zfill(2) == self.persisted_day
 
     def _take_snapshot(self, volume, snapshot, team, engine, db_name):
         snapshot_name = self.__get_snapshot_name(volume)
@@ -255,6 +259,7 @@ class ProviderGce(ProviderBase):
         )
 
         if self._verify_persistent_backup_date():
+            LOG.info('The snapshot will be persisted')
             labels['is_persisted'] = 1
             labels['persist_month'] = datetime.today().strftime("%Y-%m")
 
