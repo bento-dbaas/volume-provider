@@ -262,9 +262,10 @@ def take_snapshot(provider_name, env, identifier):
     engine = data.get("engine", None)
     team_name = data.get("team_name", None)
     db_name = data.get("db_name", None)
+    persist = bool(int(request.args.get("persist", "0")))
     try:
         provider = build_provider(provider_name, env)
-        snapshot = provider.take_snapshot(identifier, team_name, engine, db_name)
+        snapshot = provider.take_snapshot(identifier, team_name, engine, db_name, persist)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))

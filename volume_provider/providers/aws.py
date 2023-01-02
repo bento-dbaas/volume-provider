@@ -157,7 +157,7 @@ class ProviderAWS(ProviderBase):
         if var:
             dict_var[key] = var
 
-    def _take_snapshot(self, volume, snapshot, team, engine, db_name):
+    def _take_snapshot(self, volume, snapshot, team, engine, db_name, persist):
         ebs = self.__get_ebs(volume)
         #ex_metadata = {}
         #if team and engine:

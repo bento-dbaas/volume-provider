@@ -10,6 +10,7 @@ from os import getenv
 from collections import namedtuple
 from time import sleep
 
+from dateutil import relativedelta
 from googleapiclient.errors import HttpError
 
 import googleapiclient.discovery
@@ -235,21 +236,17 @@ class ProviderGce(ProviderBase):
         LOG.info('Persisted day: %s - Now: %s', self.persisted_day, now.strftime('%Y-%m-%d %H:%M:%S:%f'))
         return now.strftime('%d').zfill(2) == self.persisted_day
 
-    def _take_snapshot(self, volume, snapshot, team, engine, db_name):
-        snapshot_name = self.__get_snapshot_name(volume)
+    def _validate_persistence_month(self):
+        tz = pytz.timezone('America/Sao_Paulo')
+        now = datetime.now(tz)
+        if now.strftime('%d').zfill(2) < str(int(self.persisted_day) + 2).zfill(2):
+            return datetime.today().strftime("%Y-%m")
 
-        #ex_metadata = {}
-        #if team and engine:
-        #    ex_metadata = TeamClient.make_tags(team, engine)
-        #self.__verify_none(ex_metadata, 'engine', engine)
-        #self.__verify_none(ex_metadata, 'db_name', db_name)
-        #self.__verify_none(ex_metadata, 'team', team)
-        #self.__verify_none(
-        #    ex_metadata,
-        #    TAG_BACKUP_DBAAS.lower() if TAG_BACKUP_DBAAS else None,
-        #    1
-        #)
-        #ex_metadata['group'] = volume.group
+        nextmonth = datetime.today() + relativedelta.relativedelta(months=1)
+        return nextmonth.strftime("%Y-%m")
+
+    def _take_snapshot(self, volume, snapshot, team, engine, db_name, persist):
+        snapshot_name = self.__get_snapshot_name(volume)
 
         team = TeamClient(api_url=TEAM_API_URL, team_name=team)
         labels = team.make_labels(
@@ -258,10 +255,11 @@ class ProviderGce(ProviderBase):
             database_name=db_name
         )
 
-        if self._verify_persistent_backup_date():
+        if persist or self._verify_persistent_backup_date():
             LOG.info('The snapshot will be persisted')
+            persist_month = self._validate_persistence_month()
             labels['is_persisted'] = 1
-            labels['persist_month'] = datetime.today().strftime("%Y-%m")
+            labels['persist_month'] = persist_month
 
         snapshot.labels = labels
         snapshot.description = snapshot_name
