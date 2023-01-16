@@ -193,6 +193,12 @@ class ProviderBase(BasicProvider):
     def _new_disk_with_migration(self):
         return False
 
+    def update_team_labels(self, volume, team_name):
+        return self._update_team_labels(volume, team_name)
+
+    def _update_team_labels(self, volume, team_name):
+        pass
+
 
 class CommandsBase(BasicProvider):
 
