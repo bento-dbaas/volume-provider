@@ -200,10 +200,12 @@ class ProviderGce(ProviderBase):
         )
 
     def _resize(self, volume, new_size_kb):
-        if new_size_kb <= volume.size_kb:
+        if new_size_kb < volume.size_kb:
             raise EnvironmentError(
                 "New size must be greater than current size"
             )
+        elif new_size_kb == volume.size_kb:
+            return True
 
         config = {
             "sizeGb": volume.convert_kb_to_gb(new_size_kb, to_int=True)
