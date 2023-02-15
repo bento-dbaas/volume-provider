@@ -490,14 +490,10 @@ class ProviderGce(ProviderBase):
             print(error)
             return False
 
-    def _update_team_labels(self, volume_identifier, team_name):
+    def _update_team_labels(self, vm_name, team_name):
         disks = dict()
         team = TeamClient(api_url=TEAM_API_URL, team_name=team_name)
-        print(team)
-        volume_root = Volume.objects.get(identifier=volume_identifier)
-        status = self.update_labels(volume_root.vm_name, volume_root.zone, team.team)
-        disks[volume_root.vm_name] = status
-        other_volumes = Volume.objects.filter(vm_name=volume_root.vm_name)
+        other_volumes = Volume.objects.filter(vm_name=vm_name)
         for v in other_volumes:
             status = self.update_labels(v.resource_id, v.zone, team.team)
             disks[v.resource_id] = status

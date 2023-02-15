@@ -617,13 +617,13 @@ def _command_hosts_allow(provider_name, env, func_name):
 @log_this
 def update_team_labels(provider_name, env):
     data = request.get_json()
-    volume_identifier = data.get('volume_identifier', None)
+    vm_name = data.get('vm_name', None)
     team_name = data.get('team_name', None)
-    if not (volume_identifier and team_name):
+    if not (vm_name and team_name):
         return response_invalid_request("Invalid data {}".format(data))
     try:
         provider = build_provider(provider_name, env)
-        provider.update_team_labels(volume_identifier, team_name)
+        provider.update_team_labels(vm_name, team_name)
     except Exception as e:
         print_exc()
         return response_invalid_request(str(e))
