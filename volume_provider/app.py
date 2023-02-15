@@ -619,7 +619,7 @@ def update_team_labels(provider_name, env):
     data = request.get_json()
     vm_name = data.get('vm_name', None)
     team_name = data.get('team_name', None)
-    zone = data.get('team_name', None)
+    zone = data.get('zone', None)
     if not (vm_name and team_name and zone):
         return response_invalid_request("Invalid data {}".format(data))
     try:
