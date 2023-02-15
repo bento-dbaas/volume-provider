@@ -619,11 +619,12 @@ def update_team_labels(provider_name, env):
     data = request.get_json()
     vm_name = data.get('vm_name', None)
     team_name = data.get('team_name', None)
-    if not (vm_name and team_name):
+    zone = data.get('team_name', None)
+    if not (vm_name and team_name and zone):
         return response_invalid_request("Invalid data {}".format(data))
     try:
         provider = build_provider(provider_name, env)
-        provider.update_team_labels(vm_name, team_name)
+        provider.update_team_labels(vm_name, team_name, zone)
     except Exception as e:
         print_exc()
         return response_invalid_request(str(e))
