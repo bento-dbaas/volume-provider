@@ -611,6 +611,25 @@ def _command_hosts_allow(provider_name, env, func_name):
         return response_invalid_request(str(e))
     return response_ok(command=command)
 
+
+@app.route("/<string:provider_name>/<string:env>/volume/update_labels", methods=["POST"])
+@auth.login_required
+@log_this
+def update_team_labels(provider_name, env):
+    data = request.get_json()
+    volume_identifier = data.get('volume_identifier', None)
+    team_name = data.get('team_name', None)
+    if not (volume_identifier and team_name):
+        return response_invalid_request("Invalid data {}".format(data))
+    try:
+        provider = build_provider(provider_name, env)
+        provider.update_team_labels(volume_identifier, team_name)
+    except Exception as e:
+        print_exc()
+        return response_invalid_request(str(e))
+    return response_ok()
+
+
 @app.route('/')
 def default_route():
     response = "volume-provider, from dbaas/dbdev <br>"

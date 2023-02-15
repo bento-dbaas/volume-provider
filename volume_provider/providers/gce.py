@@ -21,7 +21,7 @@ from volume_provider.credentials.gce import CredentialGce, CredentialAddGce
 from volume_provider.providers.base import ProviderBase, CommandsBase
 from volume_provider.settings import TEAM_API_URL
 from dbaas_base_provider.team import TeamClient
-
+from volume_provider.models import Volume
 
 LOG = logging.getLogger(__name__)
 
@@ -459,6 +459,50 @@ class ProviderGce(ProviderBase):
         return url.format(project=self.credential.project,
                           region=self.credential.region,
                           disk_type=disk_type if disk_type is not None else 'pd-standard')
+
+    def update_labels(self, resource_id, zone, team):
+        try:
+            # function to get labelFingerprint and Labels info from a disk of GCP
+            disk_gcp = self.client.disks().get(project=self.credential.project,
+                                               zone=zone,
+                                               disk=resource_id).execute()
+            labelFingerprint = disk_gcp['labelFingerprint']
+            labels = disk_gcp['labels']
+
+            # add info of new team
+            labels['servico_de_negocio'] = team.get('servico-de-negocio')
+            labels['cliente'] = team.get('cliente')
+            labels['team_slug_name'] = team.get('slug')
+            labels['team_id'] = team.get('id')
+
+            # create the body of function with Label Fingerprint and Labels
+            body = dict()
+            body['labels'] = labels
+            body['labelFingerprint'] = labelFingerprint
+
+            update_disk_labels = self.client.disks().setLabels(project=self.credential.project,
+                                                               zone=zone,
+                                                               resource=resource_id,
+                                                               body=body).execute()
+            return self.wait_operation(operation=update_disk_labels.get('name'),
+                                       zone=zone)
+        except Exception as error:
+            print(error)
+            return False
+
+    def _update_team_labels(self, volume_identifier, team_name):
+        disks = dict()
+        team = TeamClient(api_url=TEAM_API_URL, team_name=team_name)
+        print(team)
+        volume_root = Volume.objects.get(identifier=volume_identifier)
+        status = self.update_labels(volume_root.vm_name, volume_root.zone, team.team)
+        disks[volume_root.vm_name] = status
+        other_volumes = Volume.objects.filter(vm_name=volume_root.vm_name)
+        for v in other_volumes:
+            status = self.update_labels(v.resource_id, v.zone, team.team)
+            disks[v.resource_id] = status
+
+        return disks
 
 
 class CommandsGce(CommandsBase):
