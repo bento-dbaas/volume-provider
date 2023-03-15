@@ -4,11 +4,13 @@ from datetime import datetime
 from time import sleep
 import httplib2
 import google_auth_httplib2
+import pytz
 
 from os import getenv
 from collections import namedtuple
 from time import sleep
 
+from dateutil import relativedelta
 from googleapiclient.errors import HttpError
 
 import googleapiclient.discovery
@@ -19,7 +21,7 @@ from volume_provider.credentials.gce import CredentialGce, CredentialAddGce
 from volume_provider.providers.base import ProviderBase, CommandsBase
 from volume_provider.settings import TEAM_API_URL
 from dbaas_base_provider.team import TeamClient
-
+from volume_provider.models import Volume
 
 LOG = logging.getLogger(__name__)
 
@@ -27,6 +29,7 @@ LOG = logging.getLogger(__name__)
 class ProviderGce(ProviderBase):
 
     seconds_to_wait = 3
+    persisted_day = str(getenv("SNAPSHOTS_PERSIST_DAY", "10")).zfill(2)
 
     def get_commands(self):
         return CommandsGce(self)
@@ -227,21 +230,23 @@ class ProviderGce(ProviderBase):
             'timestamp': datetime.now().strftime('%Y%m%d%H%M%S%f')
         }
 
-    def _take_snapshot(self, volume, snapshot, team, engine, db_name):
-        snapshot_name = self.__get_snapshot_name(volume)
+    def _verify_persistent_backup_date(self):
+        tz = pytz.timezone('America/Sao_Paulo')
+        now = datetime.now(tz)
+        LOG.info('Persisted day: %s - Now: %s', self.persisted_day, now.strftime('%Y-%m-%d %H:%M:%S:%f'))
+        return now.strftime('%d').zfill(2) == self.persisted_day
 
-        #ex_metadata = {}
-        #if team and engine:
-        #    ex_metadata = TeamClient.make_tags(team, engine)
-        #self.__verify_none(ex_metadata, 'engine', engine)
-        #self.__verify_none(ex_metadata, 'db_name', db_name)
-        #self.__verify_none(ex_metadata, 'team', team)
-        #self.__verify_none(
-        #    ex_metadata,
-        #    TAG_BACKUP_DBAAS.lower() if TAG_BACKUP_DBAAS else None,
-        #    1
-        #)
-        #ex_metadata['group'] = volume.group
+    def _validate_persistence_month(self):
+        tz = pytz.timezone('America/Sao_Paulo')
+        now = datetime.now(tz)
+        if now.strftime('%d').zfill(2) < str(int(self.persisted_day) + 2).zfill(2):
+            return datetime.today().strftime("%Y-%m")
+
+        nextmonth = datetime.today() + relativedelta.relativedelta(months=1)
+        return nextmonth.strftime("%Y-%m")
+
+    def _take_snapshot(self, volume, snapshot, team, engine, db_name, persist):
+        snapshot_name = self.__get_snapshot_name(volume)
 
         team = TeamClient(api_url=TEAM_API_URL, team_name=team)
         labels = team.make_labels(
@@ -250,7 +255,12 @@ class ProviderGce(ProviderBase):
             database_name=db_name
         )
 
-        #snapshot.labels = ex_metadata
+        if persist or self._verify_persistent_backup_date():
+            LOG.info('The snapshot will be persisted')
+            persist_month = self._validate_persistence_month()
+            labels['is_persisted'] = 1
+            labels['persist_month'] = persist_month
+
         snapshot.labels = labels
         snapshot.description = snapshot_name
 
@@ -449,6 +459,48 @@ class ProviderGce(ProviderBase):
         return url.format(project=self.credential.project,
                           region=self.credential.region,
                           disk_type=disk_type if disk_type is not None else 'pd-standard')
+
+    def update_labels(self, resource_id, zone, team):
+        try:
+            # function to get labelFingerprint and Labels info from a disk of GCP
+            disk_gcp = self.client.disks().get(project=self.credential.project,
+                                               zone=zone,
+                                               disk=resource_id).execute()
+            labelFingerprint = disk_gcp['labelFingerprint']
+            labels = disk_gcp['labels']
+
+            # add info of new team
+            labels['servico_de_negocio'] = team.get('servico-de-negocio')
+            labels['cliente'] = team.get('cliente')
+            labels['team_slug_name'] = team.get('slug')
+            labels['team_id'] = team.get('id')
+
+            # create the body of function with Label Fingerprint and Labels
+            body = dict()
+            body['labels'] = labels
+            body['labelFingerprint'] = labelFingerprint
+
+            update_disk_labels = self.client.disks().setLabels(project=self.credential.project,
+                                                               zone=zone,
+                                                               resource=resource_id,
+                                                               body=body).execute()
+            return self.wait_operation(operation=update_disk_labels.get('name'),
+                                       zone=zone)
+        except Exception as error:
+            print(error)
+            return False
+
+    def _update_team_labels(self, vm_name, team_name, zone):
+        disks = dict()
+        team = TeamClient(api_url=TEAM_API_URL, team_name=team_name)
+        status = self.update_labels(vm_name, zone, team.team)
+        disks[vm_name] = status
+        other_volumes = Volume.objects.filter(vm_name=vm_name)
+        for v in other_volumes:
+            status = self.update_labels(v.resource_id, v.zone, team.team)
+            disks[v.resource_id] = status
+
+        return disks
 
 
 class CommandsGce(CommandsBase):

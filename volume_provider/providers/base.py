@@ -135,14 +135,14 @@ class ProviderBase(BasicProvider):
     def _get_snapshot_status(self, identifier):
         raise NotImplementedError
 
-    def take_snapshot(self, identifier, team, engine, db_name):
+    def take_snapshot(self, identifier, team, engine, db_name, persist=False):
         volume = self.load_volume(identifier)
         snapshot = Snapshot(volume=volume, created_at=datetime.now())
-        self._take_snapshot(volume, snapshot, team, engine, db_name)
+        self._take_snapshot(volume, snapshot, team, engine, db_name, persist)
         snapshot.save()
         return snapshot
 
-    def _take_snapshot(self, volume, snapshot, team, engine, db_name):
+    def _take_snapshot(self, volume, snapshot, team, engine, db_name, persist):
         raise NotImplementedError
 
     def remove_snapshot(self, identifier, force=False):
@@ -192,6 +192,12 @@ class ProviderBase(BasicProvider):
 
     def _new_disk_with_migration(self):
         return False
+
+    def update_team_labels(self, volume, team_name, zone):
+        return self._update_team_labels(volume, team_name, zone)
+
+    def _update_team_labels(self, volume, team_name, zone):
+        pass
 
 
 class CommandsBase(BasicProvider):
