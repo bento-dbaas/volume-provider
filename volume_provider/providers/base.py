@@ -1,7 +1,10 @@
-from volume_provider.models import Volume, Snapshot
+import logging
 from datetime import datetime
+from volume_provider.settings import LOGGING_LEVEL
+from volume_provider.models import Volume, Snapshot
 from dbaas_base_provider.baseProvider import BaseProvider
 
+logging.basicConfig(level=LOGGING_LEVEL)
 
 class BasicProvider(BaseProvider):
     provider_type = "volume_provider"
@@ -29,8 +32,7 @@ class ProviderBase(BasicProvider):
     def get_commands(self):
         raise NotImplementedError
 
-    def create_volume(self, group, size_kb, to_address,
-                      snapshot_id=None, zone=None, vm_name=None,
+    def create_volume(self, group, size_kb, to_address, snapshot_id=None, zone=None, vm_name=None,
                       team_name=None, engine=None, db_name=None, disk_offering_type=None):
         snapshot = None
         if snapshot_id:
@@ -129,8 +131,12 @@ class ProviderBase(BasicProvider):
         raise NotImplementedError
 
     def get_snapshot_status(self, identifier):
-        snap = Snapshot.objects(identifier=identifier).get()
-        return self._get_snapshot_status(snap)
+        try:
+            snap = Snapshot.objects.get(identifier=identifier)
+            return self._get_snapshot_status(snap)
+        except Exception as e:
+            logging.error('Error when try to get snapshot object. Error: {}'.format(e))
+            return {'code': 404, 'message': 'Snapshot object not found'}
 
     def _get_snapshot_status(self, identifier):
         raise NotImplementedError
@@ -139,6 +145,13 @@ class ProviderBase(BasicProvider):
         volume = self.load_volume(identifier)
         snapshot = Snapshot(volume=volume, created_at=datetime.now())
         self._take_snapshot(volume, snapshot, team, engine, db_name, persist)
+        snapshot.save()
+        return snapshot
+
+    def new_take_snapshot(self, identifier, team, engine, db_name, persist=False):
+        volume = self.load_volume(identifier)
+        snapshot = Snapshot(volume=volume, created_at=datetime.now())
+        self._new_take_snapshot(volume, snapshot, team, engine, db_name, persist)
         snapshot.save()
         return snapshot
 
