@@ -2,12 +2,14 @@ from collections import OrderedDict
 from os import getenv
 import logging
 
-MONGODB_HOST = getenv("MONGODB_HOST", "10.91.1.128")
+
+MONGODB_HOST = getenv("MONGODB_HOST", "127.0.0.1")
 MONGODB_PORT = int(getenv("MONGODB_PORT", 27017))
-MONGODB_DB = getenv("MONGODB_DB", "mongo_volume_provider_dev")
-MONGODB_USER = getenv("MONGODB_USER", "u_mongo_volume_p")
-MONGODB_PWD = getenv("MONGODB_PWD", "u8veZBC4EF")
-MONGODB_ENDPOINT = getenv("DBAAS_MONGODB_ENDPOINT", "mongodb://u_mongo_volume_p:u8veZBC4EF@10.91.1.128:27017/mongo_volume_provider_dev")
+MONGODB_DB = getenv("MONGODB_DB", "volume_provider")
+MONGODB_USER = getenv("MONGODB_USER", None)
+MONGODB_PWD = getenv("MONGODB_PWD", None)
+MONGODB_ENDPOINT = getenv("DBAAS_MONGODB_ENDPOINT", None)
+
 MONGODB_PARAMS = {'document_class': OrderedDict}
 if MONGODB_ENDPOINT:
     MONGODB_PARAMS["host"] = MONGODB_ENDPOINT

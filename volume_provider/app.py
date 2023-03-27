@@ -285,7 +285,7 @@ def get_snapshot_status(provider_name, env, identifier):
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
 
-    if state['code'] in [404, 500]:
+    if state['code'] in [404, 408, 500]:
         return response_created(status_code=state['code'], identifier=identifier, error=state['message'])
 
     return response_created(

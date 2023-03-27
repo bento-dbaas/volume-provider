@@ -250,7 +250,7 @@ class ProviderGce(ProviderBase):
         t1 = time.time()
         snapshot_name = self.__get_snapshot_name(volume)
 
-        team = TeamClient(api_url='http://time-custeio.gcloud.globoi.com/teams', team_name=team)
+        team = TeamClient(api_url=TEAM_API_URL, team_name=team)
         labels = team.make_labels(
             engine_name=engine,
             infra_name=volume.group,
@@ -299,13 +299,13 @@ class ProviderGce(ProviderBase):
         snapshot.identifier = snap.get('id')
         snapshot.size_bytes = snap.get('downloadBytes')
         t2 = time.time()
-        print('Tempo total em LOCK old: {}s'.format(t2 - t1))
+        LOG.info('Tempo total em execução do take snapshot: {}s'.format(t2 - t1))
 
     def _new_take_snapshot(self, volume, snapshot, team, engine, db_name, persist):
         t1 = time.time()
         snapshot_name = self.__get_snapshot_name(volume)
 
-        team = TeamClient(api_url='http://time-custeio.gcloud.globoi.com/teams', team_name=team)
+        team = TeamClient(api_url=TEAM_API_URL, team_name=team)
         labels = team.make_labels(engine_name=engine, infra_name=volume.group, database_name=db_name)
 
         if persist or self._verify_persistent_backup_date():
@@ -326,20 +326,27 @@ class ProviderGce(ProviderBase):
                 "storageLocations": [self.credential.region]
             }
             LOG.info('Starting create snapshot')
-            _ = self.client.disks().createSnapshot(
-                project=self.credential.project, zone=volume.zone, disk=volume.resource_id, body=config
-            ).execute()
+            try:
+                _ = self.client.disks().createSnapshot(
+                    project=self.credential.project, zone=volume.zone, disk=volume.resource_id, body=config
+                ).execute()
 
-            snap = self.client.snapshots().get(
-                project=self.credential.project,
-                snapshot=snapshot_name
-            ).execute()
+                # Redundancia de tempo entre criação e retorno de id
+                sleep(5)
+
+                snap = self.client.snapshots().get(
+                    project=self.credential.project,
+                    snapshot=snapshot_name
+                ).execute()
+            except:
+                LOG.error('Erro ao conectar ao client.snapshot')
+                raise Exception('Erro ao conectar ao client do new take snapshot')
 
             LOG.info('Result from create snapshot. Info: {}'.format(snap))
 
         snapshot.identifier = snap.get('id')
         t2 = time.time()
-        print('Tempo total em LOCK new: {}s'.format(t2 - t1))
+        LOG.info('Tempo total em execução do new take snapshot: {}s'.format(t2 - t1))
 
     def _remove_snapshot(self, snapshot, *args, **kwrgs):
         operation = self.get_or_none_resource(
@@ -499,11 +506,15 @@ class ProviderGce(ProviderBase):
         try:
             t1 = time.time()
             LOG.info('Starting take snapshot status')
-            status_snaps = self.client.snapshots().get(
-                project=self.credential.project,
-                snapshot=snapshot.identifier,
-            ).execute()
-            LOG.info('Result from snapshot status: {}'.format(status_snaps))
+            try:
+                status_snaps = self.client.snapshots().get(
+                    project=self.credential.project,
+                    snapshot=snapshot.identifier,
+                ).execute()
+                LOG.info('Result from snapshot status: {}'.format(status_snaps))
+            except:
+                LOG.error('Erro ao conectar ao client.snapshot')
+                return {'code': 408, 'message': 'Erro ao conectar ao client'}
 
             if status_snaps:
                 result = {
@@ -527,8 +538,9 @@ class ProviderGce(ProviderBase):
                         'size': status_snaps.get('downloadBytes'),
                         'volume_path': snapshot.volume.path
                     })
+
                 t2 = time.time()
-                print('Tempo total status: {}s'.format(t2 - t1))
+                LOG.info('Tempo total em execução de status snapshot: {}s'.format(t2 - t1))
                 return result
 
             else:
