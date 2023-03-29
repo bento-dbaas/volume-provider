@@ -15,6 +15,7 @@ from volume_provider.models import Snapshot
 app = Flask(__name__)
 auth = HTTPBasicAuth()
 cors = CORS(app)
+LOG = logging.getLogger(__name__)
 
 if SENTRY_DSN:
     sentry = Sentry(app, dsn=SENTRY_DSN)
@@ -256,6 +257,10 @@ def take_snapshot(provider_name, env, identifier):
 @auth.login_required
 @log_this
 def new_take_snapshot(provider_name, env, identifier):
+    LOG.info(f'provider_name: {provider_name}')
+    LOG.info(f'identifier: {identifier}')
+    LOG.info(f'Request: {request}')
+    LOG.info(f'Data: {request.get_json()}')
     data = request.get_json()
     engine = data.get("engine", None)
     team_name = data.get("team_name", None)
