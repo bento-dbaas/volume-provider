@@ -253,14 +253,10 @@ def take_snapshot(provider_name, env, identifier):
     )
 
 
-@app.route("/<string:provider_name>/<string:env>/new_snapshot/<string:identifier>", methods=["POST"])
+@app.route("/<string:provider_name>/<string:env>/new/snapshot/<string:identifier>", methods=["POST"])
 @auth.login_required
 @log_this
 def new_take_snapshot(provider_name, env, identifier):
-    LOG.info(f'provider_name: {provider_name}')
-    LOG.info(f'identifier: {identifier}')
-    LOG.info(f'Request: {request}')
-    LOG.info(f'Data: {request.get_json()}')
     data = request.get_json()
     engine = data.get("engine", None)
     team_name = data.get("team_name", None)
@@ -295,7 +291,7 @@ def get_snapshot_status(provider_name, env, identifier):
 
     return response_created(
         status_code=state['code'], identifier=state['id'], database_name=state['db'], snapshot_status=state['status'],
-        volume_path=state['volume_path'], size=state['size']
+        volume_path=state['volume_path'], size=state['size'], description=state['description']
     )
 
 

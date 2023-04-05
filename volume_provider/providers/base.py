@@ -158,6 +158,9 @@ class ProviderBase(BasicProvider):
     def _take_snapshot(self, volume, snapshot, team, engine, db_name, persist):
         raise NotImplementedError
 
+    def _new_take_snapshot(self, volume, snapshot, team, engine, db_name, persist):
+        raise NotImplementedError
+
     def remove_snapshot(self, identifier, force=False):
         snapshot = Snapshot.objects(identifier=identifier).get()
         removed = self._remove_snapshot(snapshot, force)
