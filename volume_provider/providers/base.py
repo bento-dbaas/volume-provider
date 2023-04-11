@@ -133,10 +133,10 @@ class ProviderBase(BasicProvider):
     def get_snapshot_status(self, identifier):
         try:
             snap = Snapshot.objects.get(identifier=identifier)
-            return self._get_snapshot_status(snap)
+            return self._get_snapshot_status(snap), snap
         except Exception as e:
             logging.error('Error when try to get snapshot object. Error: {}'.format(e))
-            return {'code': 404, 'message': 'Snapshot object not found'}
+            return {'code': 404, 'message': 'Snapshot object not found'}, None
 
     def _get_snapshot_status(self, identifier):
         raise NotImplementedError

@@ -230,7 +230,7 @@ def resize_volume(provider_name, env, identifier):
     return response_ok()
 
 
-@app.route("/<string:provider_name>/<string:env>/snapshot/<string:identifier>", methods=["POST"])
+@app.route("/<string:provider_name>/<string:env>/old/snapshot/<string:identifier>", methods=["POST"])
 @auth.login_required
 @log_this
 def take_snapshot(provider_name, env, identifier):
@@ -253,7 +253,7 @@ def take_snapshot(provider_name, env, identifier):
     )
 
 
-@app.route("/<string:provider_name>/<string:env>/new/snapshot/<string:identifier>", methods=["POST"])
+@app.route("/<string:provider_name>/<string:env>/snapshot/<string:identifier>", methods=["POST"])
 @auth.login_required
 @log_this
 def new_take_snapshot(provider_name, env, identifier):
@@ -281,7 +281,7 @@ def new_take_snapshot(provider_name, env, identifier):
 def get_snapshot_status(provider_name, env, identifier):
     try:
         provider = build_provider(provider_name, env)
-        state = provider.get_snapshot_status(identifier)
+        state, snap = provider.get_snapshot_status(identifier)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
@@ -291,7 +291,7 @@ def get_snapshot_status(provider_name, env, identifier):
 
     return response_created(
         status_code=state['code'], identifier=state['id'], database_name=state['db'], snapshot_status=state['status'],
-        volume_path=state['volume_path'], size=state['size'], description=state['description']
+        volume_path=snap.volume.path, size=state['size'], description=snap.description
     )
 
 

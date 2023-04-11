@@ -6,6 +6,7 @@ import httplib2
 import google_auth_httplib2
 import pytz
 
+import socket
 from os import getenv
 from collections import namedtuple
 from time import sleep
@@ -536,8 +537,6 @@ class ProviderGce(ProviderBase):
                 if result['code'] == 200:
                     result.update({
                         'size': status_snaps.get('downloadBytes'),
-                        'volume_path': snapshot.volume.path,
-                        'description': snapshot.description
                     })
 
                 t2 = time.time()
