@@ -5,6 +5,7 @@ from time import sleep
 import httplib2
 import google_auth_httplib2
 import pytz
+import socket
 
 import socket
 from os import getenv
@@ -42,59 +43,52 @@ class ProviderGce(ProviderBase):
 
     def build_client(self):
         service_account_data = self.credential.content['service_account']
-        service_account_data['private_key'] = service_account_data[
-            'private_key'
-        ].replace('\\n', '\n')
+        service_account_data['private_key'] = service_account_data['private_key'].replace('\\n', '\n')
 
         credentials = service_account.Credentials.from_service_account_info(
-            service_account_data,
-            scopes=self.credential.scopes
+            service_account_data, scopes=self.credential.scopes
         )
 
-        if HTTP_PROXY:
-            _, host, port = HTTP_PROXY.split(':')
+        cont = 0
+        while cont <= 1:
+            cont += 1
             try:
-                port = int(port)
-            except ValueError:
-                raise EnvironmentError('HTTP_PROXY incorrect format')
+                if HTTP_PROXY:
+                    _, host, port = HTTP_PROXY.split(':')
+                    try:
+                        port = int(port)
+                    except ValueError:
+                        raise EnvironmentError('HTTP_PROXY incorrect format')
 
-            proxied_http = httplib2.Http(proxy_info=httplib2.ProxyInfo(
-                httplib2.socks.PROXY_TYPE_HTTP,
-                host.replace('//', ''),
-                port
-            ))
+                    socket.setdefaulttimeout(15)
 
-            authorized_http = google_auth_httplib2.AuthorizedHttp(
-                                credentials,
-                                http=proxied_http)
+                    proxied_http = httplib2.Http(
+                        proxy_info=httplib2.ProxyInfo(httplib2.socks.PROXY_TYPE_HTTP, host.replace('//', ''), port)
+                    )
 
-            service = googleapiclient.discovery.build(
-                        'compute',
-                        'v1',
-                        http=authorized_http)
-        else:
-            service = googleapiclient.discovery.build(
-                'compute',
-                'v1',
-                credentials=credentials,
-            )
+                    authorized_http = google_auth_httplib2.AuthorizedHttp(credentials, http=proxied_http)
+                    service = googleapiclient.discovery.build('compute', 'v1', http=authorized_http, num_retries=2)
 
-        return service
+                else:
+                    service = googleapiclient.discovery.build('compute', 'v1', credentials=credentials, num_retries=2)
+
+                return service
+
+            except:
+                raise
+
+        return False
 
     def build_credential(self):
-        return CredentialGce(
-            self.provider, self.environment
-        )
+        return CredentialGce(self.provider, self.environment)
 
     def get_credential_add(self):
         return CredentialAddGce
 
     def __get_instance_disks(self, zone, vm_name):
         all_disks = self.client.instances().get(
-                        project=self.credential.project,
-                        zone=zone,
-                        instance=vm_name
-                    ).execute().get("disks")
+            project=self.credential.project, zone=zone, instance=vm_name
+        ).execute().get("disks")
 
         return [x['deviceName'] for x in all_disks]
 
@@ -103,11 +97,7 @@ class ProviderGce(ProviderBase):
         return [self.get_device_name(x) for x in vol]
 
     def _get_new_disk_name(self, volume):
-        all_disks = self._get_volumes(
-            volume.zone,
-            volume.vm_name,
-            volume.group
-        )
+        all_disks = self._get_volumes(volume.zone, volume.vm_name, volume.group)
         all_disks_name_data = []
         for disk in all_disks:
             if 'data' in disk:
