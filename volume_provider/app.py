@@ -7,14 +7,7 @@ from raven.contrib.flask import Sentry
 from flask_cors import CORS
 from flask_httpauth import HTTPBasicAuth
 from mongoengine import connect
-from volume_provider.settings import (
-    APP_USERNAME,
-    APP_PASSWORD,
-    MONGODB_PARAMS,
-    MONGODB_DB,
-    LOGGING_LEVEL,
-    SENTRY_DSN,
-)
+from volume_provider.settings import APP_USERNAME, APP_PASSWORD, MONGODB_PARAMS, MONGODB_DB, LOGGING_LEVEL, SENTRY_DSN
 from volume_provider.providers import get_provider_to
 from dbaas_base_provider.log import log_this
 from volume_provider.models import Snapshot
@@ -22,6 +15,7 @@ from volume_provider.models import Snapshot
 app = Flask(__name__)
 auth = HTTPBasicAuth()
 cors = CORS(app)
+LOG = logging.getLogger(__name__)
 
 if SENTRY_DSN:
     sentry = Sentry(app, dsn=SENTRY_DSN)
@@ -137,10 +131,7 @@ def create_volume(provider_name, env):
     return response_created(identifier=volume.identifier)
 
 
-@app.route(
-    "/<string:provider_name>/<string:env>/volume/<string:identifier>",
-    methods=["DELETE"],
-)
+@app.route("/<string:provider_name>/<string:env>/volume/<string:identifier>", methods=["DELETE"])
 @auth.login_required
 @log_this
 def delete_volume(provider_name, env, identifier):
@@ -153,9 +144,7 @@ def delete_volume(provider_name, env, identifier):
     return response_ok()
 
 
-@app.route(
-    "/<string:provider_name>/<string:env>/move/<string:identifier>", methods=["POST"]
-)
+@app.route("/<string:provider_name>/<string:env>/move/<string:identifier>", methods=["POST"])
 @auth.login_required
 @log_this
 def move_volume(provider_name, env, identifier):
@@ -173,10 +162,7 @@ def move_volume(provider_name, env, identifier):
     return response_ok()
 
 
-@app.route(
-    "/<string:provider_name>/<string:env>/volume/<string:identifier_or_path>",
-    methods=["GET"],
-)
+@app.route("/<string:provider_name>/<string:env>/volume/<string:identifier_or_path>", methods=["GET"])
 @auth.login_required
 @log_this
 def get_volume(provider_name, env, identifier_or_path):
@@ -192,9 +178,7 @@ def get_volume(provider_name, env, identifier_or_path):
     return response_ok(**volume.get_json)
 
 
-@app.route(
-    "/<string:provider_name>/<string:env>/access/<string:identifier>", methods=["POST"]
-)
+@app.route("/<string:provider_name>/<string:env>/access/<string:identifier>", methods=["POST"])
 @auth.login_required
 @log_this
 def add_volume_access(provider_name, env, identifier):
@@ -214,10 +198,7 @@ def add_volume_access(provider_name, env, identifier):
     return response_ok()
 
 
-@app.route(
-    "/<string:name>/<string:env>/access/<string:identifier>/<string:address>",
-    methods=["DELETE"],
-)
+@app.route("/<string:name>/<string:env>/access/<string:identifier>/<string:address>", methods=["DELETE"])
 @auth.login_required
 @log_this
 def remove_volume_access(name, env, identifier, address):
@@ -230,9 +211,7 @@ def remove_volume_access(name, env, identifier, address):
     return response_ok()
 
 
-@app.route(
-    "/<string:provider_name>/<string:env>/resize/<string:identifier>", methods=["POST"]
-)
+@app.route("/<string:provider_name>/<string:env>/resize/<string:identifier>", methods=["POST"])
 @auth.login_required
 @log_this
 def resize_volume(provider_name, env, identifier):
@@ -251,10 +230,7 @@ def resize_volume(provider_name, env, identifier):
     return response_ok()
 
 
-@app.route(
-    "/<string:provider_name>/<string:env>/snapshot/<string:identifier>",
-    methods=["POST"],
-)
+@app.route("/<string:provider_name>/<string:env>/old/snapshot/<string:identifier>", methods=["POST"])
 @auth.login_required
 @log_this
 def take_snapshot(provider_name, env, identifier):
@@ -277,26 +253,49 @@ def take_snapshot(provider_name, env, identifier):
     )
 
 
-@app.route(
-    "/<string:provider_name>/<string:env>/snapshot/<string:identifier>/state",
-    methods=["GET"],
-)
+@app.route("/<string:provider_name>/<string:env>/snapshot/<string:identifier>", methods=["POST"])
+@auth.login_required
+@log_this
+def new_take_snapshot(provider_name, env, identifier):
+    data = request.get_json()
+    engine = data.get("engine", None)
+    team_name = data.get("team_name", None)
+    db_name = data.get("db_name", None)
+    persist = bool(int(request.args.get("persist", "0")))
+    try:
+        provider = build_provider(provider_name, env)
+        snapshot = provider.new_take_snapshot(identifier, team_name, engine, db_name, persist)
+    except Exception as e:  # TODO What can get wrong here?
+        print_exc()  # TODO Improve log
+        return response_invalid_request(str(e))
+    return response_created(
+        identifier=snapshot.identifier,
+        description=snapshot.description,
+        volume_path=snapshot.volume.path,
+    )
+
+
+@app.route("/<string:provider_name>/<string:env>/snapshot/<string:identifier>/state", methods=["GET"])
 @auth.login_required
 @log_this
 def get_snapshot_status(provider_name, env, identifier):
     try:
         provider = build_provider(provider_name, env)
-        state = provider.get_snapshot_status(identifier)
+        state, snap = provider.get_snapshot_status(identifier)
     except Exception as e:  # TODO What can get wrong here?
         print_exc()  # TODO Improve log
         return response_invalid_request(str(e))
-    return response_ok(state=state)
+
+    if state['code'] in [404, 408, 500]:
+        return response_created(status_code=state['code'], identifier=identifier, error=state['message'])
+
+    return response_created(
+        status_code=state['code'], identifier=state['id'], database_name=state['db'], snapshot_status=state['status'],
+        volume_path=snap.volume.path, size=state['size'], description=snap.description
+    )
 
 
-@app.route(
-    "/<string:provider_name>/<string:env>/snapshot/<string:identifier>",
-    methods=["DELETE"],
-)
+@app.route("/<string:provider_name>/<string:env>/snapshot/<string:identifier>", methods=["DELETE"])
 @auth.login_required
 @log_this
 def remove_snapshot(provider_name, env, identifier):
@@ -314,10 +313,7 @@ def remove_snapshot(provider_name, env, identifier):
     return response_ok(removed=removed)
 
 
-@app.route(
-    "/<string:provider_name>/<string:env>/snapshot/<string:identifier>/restore",
-    methods=["POST"],
-)
+@app.route("/<string:provider_name>/<string:env>/snapshot/<string:identifier>/restore", methods=["POST"])
 @auth.login_required
 @log_this
 def restore_snapshot(provider_name, env, identifier):
@@ -341,10 +337,7 @@ def restore_snapshot(provider_name, env, identifier):
     return response_created(identifier=volume.identifier)
 
 
-@app.route(
-    "/<string:provider_name>/<string:env>/commands/<string:identifier>/mount",
-    methods=["POST"],
-)
+@app.route("/<string:provider_name>/<string:env>/commands/<string:identifier>/mount", methods=["POST"])
 @auth.login_required
 @log_this
 def command_mount(provider_name, env, identifier):
@@ -366,9 +359,7 @@ def command_mount(provider_name, env, identifier):
     return response_ok(command=command)
 
 
-@app.route(
-    "/<string:provider_name>/<string:env>/attach/<string:identifier>/", methods=["POST"]
-)
+@app.route("/<string:provider_name>/<string:env>/attach/<string:identifier>/", methods=["POST"])
 @auth.login_required
 @log_this
 def attach_volume(provider_name, env, identifier):
@@ -385,9 +376,7 @@ def attach_volume(provider_name, env, identifier):
     return response_ok()
 
 
-@app.route(
-    "/<string:provider_name>/<string:env>/detach/<string:identifier>/", methods=["POST"]
-)
+@app.route("/<string:provider_name>/<string:env>/detach/<string:identifier>/", methods=["POST"])
 @auth.login_required
 @log_this
 def detach_volume(provider_name, env, identifier):
@@ -402,10 +391,7 @@ def detach_volume(provider_name, env, identifier):
     return response_ok()
 
 
-@app.route(
-    "/<string:provider_name>/<string:env>/snapshots/<string:identifier>/commands/scp",
-    methods=["GET"],
-)
+@app.route("/<string:provider_name>/<string:env>/snapshots/<string:identifier>/commands/scp", methods=["GET"])
 @auth.login_required
 @log_this
 def command_scp_from_snap(provider_name, env, identifier):
@@ -425,13 +411,7 @@ def command_scp_from_snap(provider_name, env, identifier):
     return response_ok(command=command)
 
 
-@app.route(
-    (
-        "/<string:provider_name>/<string:env>/"
-        "snapshots/<string:identifier>/commands/rsync"
-    ),
-    methods=["GET"],
-)
+@app.route("/<string:provider_name>/<string:env>/snapshots/<string:identifier>/commands/rsync", methods=["GET"])
 @auth.login_required
 @log_this
 def command_rsync_from_snap(provider_name, env, identifier=None):
@@ -456,9 +436,7 @@ def command_rsync_from_snap(provider_name, env, identifier=None):
     return response_ok(command=command)
 
 
-@app.route(
-    "/<string:provider_name>/<string:env>/commands/create_pub_key", methods=["GET"]
-)
+@app.route("/<string:provider_name>/<string:env>/commands/create_pub_key", methods=["GET"])
 @auth.login_required
 @log_this
 def command_create_pub_key(provider_name, env):
@@ -466,9 +444,7 @@ def command_create_pub_key(provider_name, env):
     return _command(provider_name, env, "create_pub_key", keys_must_on_payload)
 
 
-@app.route(
-    "/<string:provider_name>/<string:env>/commands/remove_pub_key", methods=["GET"]
-)
+@app.route("/<string:provider_name>/<string:env>/commands/remove_pub_key", methods=["GET"])
 @auth.login_required
 @log_this
 def command_remove_pub_key(provider_name, env):
@@ -476,18 +452,14 @@ def command_remove_pub_key(provider_name, env):
     return _command(provider_name, env, "remove_pub_key", keys_must_on_payload)
 
 
-@app.route(
-    "/<string:provider_name>/<string:env>/commands/add_hosts_allow", methods=["GET"]
-)
+@app.route("/<string:provider_name>/<string:env>/commands/add_hosts_allow", methods=["GET"])
 @auth.login_required
 @log_this
 def command_add_hosts_allow(provider_name, env):
     return _command_hosts_allow(provider_name, env, "add_hosts_allow")
 
 
-@app.route(
-    "/<string:provider_name>/<string:env>/commands/remove_hosts_allow", methods=["GET"]
-)
+@app.route("/<string:provider_name>/<string:env>/commands/remove_hosts_allow", methods=["GET"])
 @auth.login_required
 @log_this
 def command_remove_hosts_allow(provider_name, env):
@@ -508,10 +480,7 @@ def command_copy_files(provider_name, env):
     return response_ok(command=command)
 
 
-@app.route(
-    "/<string:provider_name>/<string:env>/commands/<string:identifier>/umount",
-    methods=["POST"],
-)
+@app.route("/<string:provider_name>/<string:env>/commands/<string:identifier>/umount", methods=["POST"])
 @auth.login_required
 @log_this
 def command_umount(provider_name, env, identifier):
@@ -526,10 +495,7 @@ def command_umount(provider_name, env, identifier):
     return response_ok(command=command)
 
 
-@app.route(
-    "/<string:provider_name>/<string:env>/commands/<string:identifier>/cleanup",
-    methods=["GET"],
-)
+@app.route("/<string:provider_name>/<string:env>/commands/<string:identifier>/cleanup", methods=["GET"])
 @auth.login_required
 @log_this
 def cleanup(provider_name, env, identifier):
@@ -544,10 +510,7 @@ def cleanup(provider_name, env, identifier):
 
 # this route only checks if environment must create other
 # disk to migrate
-@app.route(
-    "/<string:provider_name>/<string:env>/new-disk-migration",
-    methods=['GET']
-)
+@app.route("/<string:provider_name>/<string:env>/new-disk-migration", methods=['GET'])
 @auth.login_required
 @log_this
 def new_disk_with_migration(provider_name, env):
@@ -560,10 +523,7 @@ def new_disk_with_migration(provider_name, env):
     return response_ok(create_new_disk=should_create)
 
 
-@app.route(
-    "/<string:provider_name>/<string:env>/commands/<string:identifier>/resize2fs",
-    methods=["POST"],
-)
+@app.route("/<string:provider_name>/<string:env>/commands/<string:identifier>/resize2fs", methods=["POST"])
 @auth.login_required
 @log_this
 def resize2fs(provider_name, env, identifier):
@@ -641,13 +601,14 @@ def default_route():
         response += "build_info.txt not found"
     return response
 
+
 def response_invalid_request(error, status_code=500):
     return _response(status_code, error=error)
 
 
-def response_not_found(identifier):
+def response_not_found(identifier, message=None):
     error = "Could not found with {}".format(identifier)
-    return _response(404, error=error)
+    return _response(404, error=error, message=message)
 
 
 def response_created(status_code=201, **kwargs):

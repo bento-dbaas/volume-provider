@@ -6,6 +6,7 @@ import httplib2
 import google_auth_httplib2
 import pytz
 
+import socket
 from os import getenv
 from collections import namedtuple
 from time import sleep
@@ -22,6 +23,7 @@ from volume_provider.providers.base import ProviderBase, CommandsBase
 from volume_provider.settings import TEAM_API_URL
 from dbaas_base_provider.team import TeamClient
 from volume_provider.models import Volume
+import time
 
 LOG = logging.getLogger(__name__)
 
@@ -246,6 +248,7 @@ class ProviderGce(ProviderBase):
         return nextmonth.strftime("%Y-%m")
 
     def _take_snapshot(self, volume, snapshot, team, engine, db_name, persist):
+        t1 = time.time()
         snapshot_name = self.__get_snapshot_name(volume)
 
         team = TeamClient(api_url=TEAM_API_URL, team_name=team)
@@ -296,6 +299,55 @@ class ProviderGce(ProviderBase):
 
         snapshot.identifier = snap.get('id')
         snapshot.size_bytes = snap.get('downloadBytes')
+        t2 = time.time()
+        LOG.info('Tempo total em execução do take snapshot: {}s'.format(t2 - t1))
+
+    def _new_take_snapshot(self, volume, snapshot, team, engine, db_name, persist):
+        t1 = time.time()
+        snapshot_name = self.__get_snapshot_name(volume)
+
+        team = TeamClient(api_url=TEAM_API_URL, team_name=team)
+        labels = team.make_labels(engine_name=engine, infra_name=volume.group, database_name=db_name)
+
+        if persist or self._verify_persistent_backup_date():
+            LOG.info('The snapshot will be persisted')
+            persist_month = self._validate_persistence_month()
+            labels['is_persisted'] = 1
+            labels['persist_month'] = persist_month
+
+        snapshot.labels = labels
+        snapshot.description = snapshot_name
+
+        snap = self.get_or_none_resource(self.client.snapshots, project=self.credential.project, snapshot=snapshot_name)
+
+        if snap is None:
+            config = {
+                'labels': labels,
+                'name': snapshot_name,
+                "storageLocations": [self.credential.region]
+            }
+            LOG.info('Starting create snapshot')
+            try:
+                _ = self.client.disks().createSnapshot(
+                    project=self.credential.project, zone=volume.zone, disk=volume.resource_id, body=config
+                ).execute()
+
+                # Redundancia de tempo entre criação e retorno de id
+                sleep(5)
+
+                snap = self.client.snapshots().get(
+                    project=self.credential.project,
+                    snapshot=snapshot_name
+                ).execute()
+            except:
+                LOG.error('Erro ao conectar ao client.snapshot')
+                raise Exception('Erro ao conectar ao client do new take snapshot')
+
+            LOG.info('Result from create snapshot. Info: {}'.format(snap))
+
+        snapshot.identifier = snap.get('id')
+        t2 = time.time()
+        LOG.info('Tempo total em execução do new take snapshot: {}s'.format(t2 - t1))
 
     def _remove_snapshot(self, snapshot, *args, **kwrgs):
         operation = self.get_or_none_resource(
@@ -452,7 +504,50 @@ class ProviderGce(ProviderBase):
         return True
 
     def _get_snapshot_status(self, snapshot):
-        return "available"
+        try:
+            t1 = time.time()
+            LOG.info('Starting take snapshot status')
+            try:
+                status_snaps = self.client.snapshots().get(
+                    project=self.credential.project,
+                    snapshot=snapshot.identifier,
+                ).execute()
+                LOG.info('Result from snapshot status: {}'.format(status_snaps))
+            except:
+                LOG.error('Erro ao conectar ao client.snapshot')
+                return {'code': 408, 'message': 'Erro ao conectar ao client'}
+
+            if status_snaps:
+                result = {
+                    'id': status_snaps['id'],
+                    'status': status_snaps['status'],
+                    'db': status_snaps['labels']['database_name'],
+                }
+
+                # Set return code by mapping result status
+                status_map = {
+                    'ready': 200,
+                    'creating': 201,
+                    'uploading': 202,
+                    'deleting': 200,
+                    'failed': 400,
+                }
+                result['code'] = status_map[result['status'].lower()]
+
+                if result['code'] == 200:
+                    result.update({
+                        'size': status_snaps.get('downloadBytes'),
+                    })
+
+                t2 = time.time()
+                LOG.info('Tempo total em execução de status snapshot: {}s'.format(t2 - t1))
+                return result
+
+            else:
+                return {'code': 404, 'message': 'Snapshot not found'}
+
+        except Exception as e:
+            return {'code': 500, 'message': e}
 
     def build_type_disk_url(self, disk_type):
         url = "/projects/{project}/regions/{region}/diskTypes/{disk_type}"
@@ -510,9 +605,7 @@ class CommandsGce(CommandsBase):
     def __init__(self, provider):
         self._provider = provider
 
-    def _mount(self, volume, fstab=True,
-               host_vm=None, host_zone=None, *args, **kwargs):
-
+    def _mount(self, volume, fstab=True, host_vm=None, host_zone=None, *args, **kwargs):
 
         command = """try_loop=0;\
                      while [[ ! -L %(disk_path)s && $try_loop -lt 30 ]];\
