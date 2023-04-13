@@ -289,10 +289,17 @@ def get_snapshot_status(provider_name, env, identifier):
     if state['code'] in [404, 408, 500]:
         return response_created(status_code=state['code'], identifier=identifier, error=state['message'])
 
-    return response_created(
-        status_code=state['code'], identifier=state['id'], database_name=state['db'], snapshot_status=state['status'],
-        volume_path=snap.volume.path, size=state['size'], description=snap.description
-    )
+    if state['code'] == 200:
+        return response_created(
+            status_code=state['code'], identifier=state['id'], database_name=state['db'], snapshot_status=state['status'],
+            volume_path=snap.volume.path, size=state['size'], description=snap.description
+        )
+    else:
+        return response_created(
+            status_code=state['code'], identifier=state['id'], database_name=state['db'],
+            snapshot_status=state['status'],
+            volume_path=snap.volume.path, description=snap.description
+        )
 
 
 @app.route("/<string:provider_name>/<string:env>/snapshot/<string:identifier>", methods=["DELETE"])
