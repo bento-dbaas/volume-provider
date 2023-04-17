@@ -230,7 +230,7 @@ def resize_volume(provider_name, env, identifier):
     return response_ok()
 
 
-@app.route("/<string:provider_name>/<string:env>/old/snapshot/<string:identifier>", methods=["POST"])
+@app.route("/<string:provider_name>/<string:env>/snapshot/<string:identifier>", methods=["POST"])
 @auth.login_required
 @log_this
 def take_snapshot(provider_name, env, identifier):
@@ -253,7 +253,7 @@ def take_snapshot(provider_name, env, identifier):
     )
 
 
-@app.route("/<string:provider_name>/<string:env>/snapshot/<string:identifier>", methods=["POST"])
+@app.route("/<string:provider_name>/<string:env>/gcp/snapshot/<string:identifier>", methods=["POST"])
 @auth.login_required
 @log_this
 def new_take_snapshot(provider_name, env, identifier):
