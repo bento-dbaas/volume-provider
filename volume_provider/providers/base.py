@@ -1,6 +1,10 @@
 import logging
+import requests
+import datetime
+from requests.auth import HTTPBasicAuth
 from datetime import datetime
-from volume_provider.settings import LOGGING_LEVEL
+
+from volume_provider.settings import LOGGING_LEVEL, TEAM_API_URL, DBAAS_TEAM_API_URL, USER_DBAAS_API, PASSWORD_DBAAS_API
 from volume_provider.models import Volume, Snapshot
 from dbaas_base_provider.baseProvider import BaseProvider
 
@@ -106,6 +110,31 @@ class ProviderBase(BasicProvider):
             )
         except Volume.DoesNotExist:
             return None
+
+    def get_team(self, team_name, infra_name='', database_name='', engine_name=''):
+        team_labels = {}
+        url = DBAAS_TEAM_API_URL + team_name
+        response = requests.get(url, verify=False, auth=HTTPBasicAuth(USER_DBAAS_API, PASSWORD_DBAAS_API))
+        if response.status_code == 200:
+            team = response.json()
+            team_labels = {
+                "servico_de_negocio": team["business_service"],
+                "cliente": team["client"],
+                "team_slug_name": team["slug"],
+                "team_id": team["identifier"],
+                "created_at": datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'),
+                "engine": engine_name,
+                "infra_name": infra_name,
+                "database_name": database_name
+            }
+        else:
+            team = TeamClient(api_url=TEAM_API_URL, team_name=team_name)
+            team_labels = team.make_labels(
+                engine_name=engine_name,
+                infra_name=infra_name,
+                database_name=database_name
+            )
+        return team_labels
 
     def add_access(self, identifier, to_address, access_type=None):
         volume = self.load_volume(identifier)

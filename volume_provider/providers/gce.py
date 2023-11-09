@@ -116,12 +116,7 @@ class ProviderGce(ProviderBase):
         if not team_name:
             raise Exception("The team name must be passed")
 
-        team = TeamClient(api_url=TEAM_API_URL, team_name=team_name)
-        labels = team.make_labels(
-            engine_name=kwargs.get("engine", ''),
-            infra_name=volume.group,
-            database_name=kwargs.get("db_name", '')
-        )
+        labels = self.get_team(team_name, volume.group, kwargs.get("db_name", ''), kwargs.get("engine", ''))
 
         config = {
             'name': disk_name,
@@ -241,12 +236,7 @@ class ProviderGce(ProviderBase):
         t1 = time.time()
         snapshot_name = self.__get_snapshot_name(volume)
 
-        team = TeamClient(api_url=TEAM_API_URL, team_name=team)
-        labels = team.make_labels(
-            engine_name=engine,
-            infra_name=volume.group,
-            database_name=db_name
-        )
+        labels = self.get_team(team, volume.group, db_name, engine)
 
         if persist or self._verify_persistent_backup_date():
             LOG.info('The snapshot will be persisted')
@@ -296,8 +286,7 @@ class ProviderGce(ProviderBase):
         t1 = time.time()
         snapshot_name = self.__get_snapshot_name(volume)
 
-        team = TeamClient(api_url=TEAM_API_URL, team_name=team)
-        labels = team.make_labels(engine_name=engine, infra_name=volume.group, database_name=db_name)
+        labels = self.get_team(team, volume.group, db_name, engine)
 
         if persist or self._verify_persistent_backup_date():
             LOG.info('The snapshot will be persisted')
@@ -555,10 +544,10 @@ class ProviderGce(ProviderBase):
             labels = disk_gcp['labels']
 
             # add info of new team
-            labels['servico_de_negocio'] = team.get('servico-de-negocio')
+            labels['servico_de_negocio'] = team.get('servico_de_negocio')
             labels['cliente'] = team.get('cliente')
-            labels['team_slug_name'] = team.get('slug')
-            labels['team_id'] = team.get('id')
+            labels['team_slug_name'] = team.get('team_slug_name')
+            labels['team_id'] = team.get('team_id')
 
             # create the body of function with Label Fingerprint and Labels
             body = dict()
@@ -577,8 +566,8 @@ class ProviderGce(ProviderBase):
 
     def _update_team_labels(self, vm_name, team_name, zone):
         disks = dict()
-        team = TeamClient(api_url=TEAM_API_URL, team_name=team_name)
-        status = self.update_labels(vm_name, zone, team.team)
+        team = self.get_team(team_name)
+        status = self.update_labels(vm_name, zone, team)
         disks[vm_name] = status
         other_volumes = Volume.objects.filter(vm_name=vm_name)
         for v in other_volumes:
