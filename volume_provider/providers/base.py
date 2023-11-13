@@ -7,6 +7,7 @@ from datetime import datetime
 from volume_provider.settings import LOGGING_LEVEL, TEAM_API_URL, DBAAS_TEAM_API_URL, USER_DBAAS_API, PASSWORD_DBAAS_API
 from volume_provider.models import Volume, Snapshot
 from dbaas_base_provider.baseProvider import BaseProvider
+from dbaas_base_provider.team import TeamClient
 
 logging.basicConfig(level=LOGGING_LEVEL)
 
@@ -111,7 +112,7 @@ class ProviderBase(BasicProvider):
         except Volume.DoesNotExist:
             return None
 
-    def get_team(self, team_name, infra_name='', database_name='', engine_name=''):
+    def get_team_labels_formatted(self, team_name, infra_name='', database_name='', engine_name=''):
         team_labels = {}
         url = DBAAS_TEAM_API_URL + team_name
         response = requests.get(url, verify=False, auth=HTTPBasicAuth(USER_DBAAS_API, PASSWORD_DBAAS_API))

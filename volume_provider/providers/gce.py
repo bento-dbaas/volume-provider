@@ -116,7 +116,7 @@ class ProviderGce(ProviderBase):
         if not team_name:
             raise Exception("The team name must be passed")
 
-        labels = self.get_team(team_name, volume.group, kwargs.get("db_name", ''), kwargs.get("engine", ''))
+        labels = self.get_team_labels_formatted(team_name, volume.group, kwargs.get("db_name", ''), kwargs.get("engine", ''))
 
         config = {
             'name': disk_name,
@@ -236,7 +236,7 @@ class ProviderGce(ProviderBase):
         t1 = time.time()
         snapshot_name = self.__get_snapshot_name(volume)
 
-        labels = self.get_team(team, volume.group, db_name, engine)
+        labels = self.get_team_labels_formatted(team, volume.group, db_name, engine)
 
         if persist or self._verify_persistent_backup_date():
             LOG.info('The snapshot will be persisted')
@@ -286,7 +286,7 @@ class ProviderGce(ProviderBase):
         t1 = time.time()
         snapshot_name = self.__get_snapshot_name(volume)
 
-        labels = self.get_team(team, volume.group, db_name, engine)
+        labels = self.get_team_labels_formatted(team, volume.group, db_name, engine)
 
         if persist or self._verify_persistent_backup_date():
             LOG.info('The snapshot will be persisted')
@@ -566,7 +566,7 @@ class ProviderGce(ProviderBase):
 
     def _update_team_labels(self, vm_name, team_name, zone):
         disks = dict()
-        team = self.get_team(team_name)
+        team = self.get_team_labels_formatted(team_name)
         status = self.update_labels(vm_name, zone, team)
         disks[vm_name] = status
         other_volumes = Volume.objects.filter(vm_name=vm_name)

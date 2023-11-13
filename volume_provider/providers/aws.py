@@ -167,7 +167,7 @@ class ProviderAWS(ProviderBase):
         #self.__verify_none(ex_metadata, 'team', team)
         #self.__verify_none(ex_metadata, TAG_BACKUP_DBAAS, 1)
 
-        labels = self.get_team(team, volume.group, db_name, engine)
+        labels = self.get_team_labels_formatted(team, volume.group, db_name, engine)
         new_snapshot = self.client.create_volume_snapshot(
             ebs, ex_metadata=labels
         )
