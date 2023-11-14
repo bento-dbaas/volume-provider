@@ -24,7 +24,11 @@ APP_PASSWORD = getenv("APP_PASSWORD", None)
 
 HTTP_PROXY = getenv("DBAAS_HTTP_PROXY", None)
 HTTPS_PROXY = getenv("DBAAS_HTTPS_PROXY", None)
+
 TEAM_API_URL = getenv("TEAM_API_URL", None)
+DBAAS_TEAM_API_URL = getenv("DBAAS_TEAM_API_URL", None)
+USER_DBAAS_API = getenv("USER_DBAAS_API", "user")
+PASSWORD_DBAAS_API = getenv("PASSWORD_DBAAS_API", "password")
 
 TAG_BACKUP_DBAAS = getenv("TAG_BACKUP_DBAAS", None)
 LOGGING_LEVEL = int(getenv('LOGGING_LEVEL', logging.INFO))
