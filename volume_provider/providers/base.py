@@ -1,7 +1,15 @@
-from volume_provider.models import Volume, Snapshot
+import logging
+import requests
+import datetime
+from requests.auth import HTTPBasicAuth
 from datetime import datetime
-from dbaas_base_provider.baseProvider import BaseProvider
 
+from volume_provider.settings import LOGGING_LEVEL, TEAM_API_URL, DBAAS_TEAM_API_URL, USER_DBAAS_API, PASSWORD_DBAAS_API
+from volume_provider.models import Volume, Snapshot
+from dbaas_base_provider.baseProvider import BaseProvider
+from dbaas_base_provider.team import TeamClient
+
+logging.basicConfig(level=LOGGING_LEVEL)
 
 class BasicProvider(BaseProvider):
     provider_type = "volume_provider"
@@ -29,8 +37,7 @@ class ProviderBase(BasicProvider):
     def get_commands(self):
         raise NotImplementedError
 
-    def create_volume(self, group, size_kb, to_address,
-                      snapshot_id=None, zone=None, vm_name=None,
+    def create_volume(self, group, size_kb, to_address, snapshot_id=None, zone=None, vm_name=None,
                       team_name=None, engine=None, db_name=None, disk_offering_type=None):
         snapshot = None
         if snapshot_id:
@@ -105,6 +112,31 @@ class ProviderBase(BasicProvider):
         except Volume.DoesNotExist:
             return None
 
+    def get_team_labels_formatted(self, team_name, infra_name='', database_name='', engine_name=''):
+        team_labels = {}
+        url = DBAAS_TEAM_API_URL + team_name
+        response = requests.get(url, verify=False, auth=HTTPBasicAuth(USER_DBAAS_API, PASSWORD_DBAAS_API))
+        if response.status_code == 200:
+            team = response.json()
+            team_labels = {
+                "servico_de_negocio": team["business_service"],
+                "cliente": team["client"],
+                "team_slug_name": team["slug"],
+                "team_id": team["identifier"],
+                "created_at": datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'),
+                "engine": engine_name,
+                "infra_name": infra_name,
+                "database_name": database_name
+            }
+        else:
+            team = TeamClient(api_url=TEAM_API_URL, team_name=team_name)
+            team_labels = team.make_labels(
+                engine_name=engine_name,
+                infra_name=infra_name,
+                database_name=database_name
+            )
+        return team_labels
+
     def add_access(self, identifier, to_address, access_type=None):
         volume = self.load_volume(identifier)
         self._add_access(volume, to_address, access_type)
@@ -129,8 +161,12 @@ class ProviderBase(BasicProvider):
         raise NotImplementedError
 
     def get_snapshot_status(self, identifier):
-        snap = Snapshot.objects(identifier=identifier).get()
-        return self._get_snapshot_status(snap)
+        try:
+            snap = Snapshot.objects.get(identifier=identifier)
+            return self._get_snapshot_status(snap), snap
+        except Exception as e:
+            logging.error('Error when try to get snapshot object. Error: {}'.format(e))
+            return {'code': 404, 'message': 'Snapshot object not found'}, None
 
     def _get_snapshot_status(self, identifier):
         raise NotImplementedError
@@ -142,7 +178,17 @@ class ProviderBase(BasicProvider):
         snapshot.save()
         return snapshot
 
+    def new_take_snapshot(self, identifier, team, engine, db_name, persist=False):
+        volume = self.load_volume(identifier)
+        snapshot = Snapshot(volume=volume, created_at=datetime.now())
+        self._new_take_snapshot(volume, snapshot, team, engine, db_name, persist)
+        snapshot.save()
+        return snapshot
+
     def _take_snapshot(self, volume, snapshot, team, engine, db_name, persist):
+        raise NotImplementedError
+
+    def _new_take_snapshot(self, volume, snapshot, team, engine, db_name, persist):
         raise NotImplementedError
 
     def remove_snapshot(self, identifier, force=False):
