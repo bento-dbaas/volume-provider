@@ -1,6 +1,5 @@
 import logging
 import requests
-import datetime
 from requests.auth import HTTPBasicAuth
 from datetime import datetime
 
@@ -123,7 +122,7 @@ class ProviderBase(BasicProvider):
                 "cliente": team["client"],
                 "team_slug_name": team["slug"],
                 "team_id": team["identifier"],
-                "created_at": datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'),
+                "created_at": datetime.now().strftime('%Y-%m-%d_%H-%M-%S'),
                 "engine": engine_name,
                 "infra_name": infra_name,
                 "database_name": database_name
