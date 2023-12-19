@@ -125,7 +125,8 @@ class ProviderBase(BasicProvider):
                 "created_at": datetime.now().strftime('%Y-%m-%d_%H-%M-%S'),
                 "engine": engine_name,
                 "infra_name": infra_name,
-                "database_name": database_name
+                "database_name": database_name,
+                'origin': 'dbaas'
             }
         else:
             team = TeamClient(api_url=TEAM_API_URL, team_name=team_name)
