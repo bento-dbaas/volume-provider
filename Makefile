@@ -42,9 +42,9 @@ docker_deploy_gcp:
 	@echo "tag usada:${TAG}"
 	@echo "exemplo de uso:"
 	@echo "make docker_deploy_gcp TAG=v1.02"
-	@echo "Checar as tags atuais: https://console.cloud.google.com/artifacts/docker/gglobo-dbaas-hub/us-east1/dbaas-docker-images?project=gglobo-dbaas-hub"
 	make docker_deploy_build TAG=${TAG}
 	make docker_deploy_push TAG=${TAG}
+	make set_new_tag TAG=${TAG} ENV=${ENV}
 
 docker_deploy_build: 
 	@echo "tag usada:${TAG}"
@@ -61,3 +61,59 @@ docker_deploy_push:
 	@echo "tag usada:${TAG}"
 	@echo "exemplo de uso make docker_deploy_push TAG=v1.02"
 	docker push us-east1-docker.pkg.dev/gglobo-dbaas-hub/dbaas-docker-images/volume-provider:${TAG}
+
+get_last_tag:
+	@echo "exemplo de uso make get_last_tag ENV=DEV"; \
+	echo "exemplo de uso make get_last_tag ENV=DEV_2"; \
+	echo "exemplo de uso make get_last_tag ENV=PROD"; \
+	make set_env ENV=${ENV}; \
+	SECRET_NAME="DBDEV_${ENV}_VOLUME_PROVIDER_IMAGE_VERSION"; \
+	echo "Getting secret $${SECRET_NAME}"; \
+	gcloud secrets versions access "latest" --secret "$${SECRET_NAME}"; \
+	echo " " 
+
+set_new_tag:
+	@echo "tag usada:${TAG}"
+	@echo "exemplo de uso make set_tag TAG=v1.02 ENV=DEV"
+	@echo "exemplo de uso make set_tag TAG=v1.02 ENV=DEV_2"
+	@echo "exemplo de uso make set_tag TAG=v1.034 ENV=PROD"
+	@make set_env ENV=${ENV}; \
+	if [ $$? -eq 0 ]; then \
+		echo "env set"; \
+	else \
+		echo "ERROR SETTING ENVIRONMENT"; \
+		exit 1; \
+	fi; \
+	SECRET=${TAG}; \
+	SECRET_NAME="DBDEV_${ENV}_VOLUME_PROVIDER_IMAGE_VERSION"; \
+	echo "$${SECRET_NAME}"; \
+	echo "$${SECRET}" | gcloud secrets create "$${SECRET_NAME}" --locations=us-east1,southamerica-east1 --replication-policy="user-managed" --labels="app=dbaas-app" --data-file=- ; \
+	if [ $$? -eq 0 ]; then \
+		echo "Created the new secret sucessfully"; \
+	else \
+		echo "Secret already exists, updating its version!" ; \
+		echo $${SECRET} | gcloud secrets versions add $${SECRET_NAME} --data-file=- ; \
+	fi
+
+set_env:
+	@echo "Project env:${ENV}"; \
+	if [ "${ENV}" = "DEV" ]; then \
+    	echo 'changing project to DEV'; \
+    	LOWERCASE_ENV="dev"; \
+    	gcloud config set project gglobo-dbaaslab-dev-qa; \
+		exit 0; \
+    elif [ "${ENV}" = "DEV_2" ]; then \
+    	echo 'changing project to DEV_2'; \
+    	LOWERCASE_ENV="dev_2"; \
+    	gcloud config set project gglobo-dbaaslab-dev-qa; \
+		exit 0; \
+	elif [ "${ENV}" = "PROD" ]; then \
+		echo 'changing project to PROD'; \
+		LOWERCASE_ENV="prod"; \
+		gcloud config set project gglobo-dbaas-hub; \
+		exit 0; \
+	else\
+		echo "ENV not found. Exiting";\
+		echo "please call like this: make set_env ENV=PROD or DEV";\
+		exit 1;\
+	fi\
