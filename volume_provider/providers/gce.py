@@ -223,7 +223,25 @@ class ProviderGce(ProviderBase):
         LOG.info('Persisted day: %s - Now: %s', self.persisted_day, now.strftime('%Y-%m-%d %H:%M:%S:%f'))
         return now.strftime('%d').zfill(2) == self.persisted_day
 
-    def _validate_persistence_month(self):
+    def _get_persist_month(self):
+        """ get the correct persist month
+
+        we need this label attached to the snapshot so we know when to send this to the backup guys
+
+        since we run the persisted scripts on day self.persisted_day, we may
+        have a persistent backup run just before it, and it would need to have
+        the last month as persisted
+
+
+        exemplo:
+        com persisted_day sendo dia 10
+               nome        |  data      |  persist_month
+        backup_persisistdo   01-09-2024   2024-01
+        backup_persisistdo   01-10-2024   2024-01
+        backup_persisistdo   01-11-2024   2024-01
+        backup_persisistdo   01-12-2024   2024-02
+
+        """
         tz = pytz.timezone('America/Sao_Paulo')
         now = datetime.now(tz)
         if now.strftime('%d').zfill(2) < str(int(self.persisted_day) + 2).zfill(2):
@@ -240,7 +258,7 @@ class ProviderGce(ProviderBase):
 
         if persist or self._verify_persistent_backup_date():
             LOG.info('The snapshot will be persisted')
-            persist_month = self._validate_persistence_month()
+            persist_month = self._get_persist_month()
             labels['is_persisted'] = 1
             labels['persist_month'] = persist_month
 
@@ -290,7 +308,7 @@ class ProviderGce(ProviderBase):
 
         if persist or self._verify_persistent_backup_date():
             LOG.info('The snapshot will be persisted')
-            persist_month = self._validate_persistence_month()
+            persist_month = self._get_persist_month()
             labels['is_persisted'] = 1
             labels['persist_month'] = persist_month
 
