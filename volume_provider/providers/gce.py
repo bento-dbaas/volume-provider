@@ -571,7 +571,7 @@ class ProviderGce(ProviderBase):
         disks[vm_name] = status
         other_volumes = Volume.objects.filter(vm_name=vm_name)
         for v in other_volumes:
-            status = self.update_labels(v.resource_id, v.zone, team.team)
+            status = self.update_labels(v.resource_id, v.zone, team)
             disks[v.resource_id] = status
 
         return disks
