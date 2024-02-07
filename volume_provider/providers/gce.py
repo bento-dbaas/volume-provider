@@ -151,7 +151,27 @@ class ProviderGce(ProviderBase):
                 operation=disk_create.get('name')
             )
 
-        volume.identifier = disk_create.get('id')
+        # Remover após os teste em LAB
+        # Hoje quando e criado um disco este ID retornado é o ID da operação e não do disco.
+        # Neste caso temos que pegar o targetId
+        # Exemplo de Response
+        # response: {
+        # @type: "type.googleapis.com/operation"
+        # id: "4291308184570152295"
+        # insertTime: "2024-01-19T05:39:20.967-08:00"
+        # name: "operation-1705671560775-60f4c9b7bc6c6-c1bdae70-a743fd0b"
+        # operationType: "insert"
+        # progress: "0"
+        # selfLink: "https://www.googleapis.com/compute/v1/projects/gglobo-dbaas-tsr-dev/zones/us-east1-d/operations/operation-1705671560775-60f4c9b7bc6c6-c1bdae70-a743fd0b"
+        # selfLinkWithId: "https://www.googleapis.com/compute/v1/projects/gglobo-dbaas-tsr-dev/zones/us-east1-d/operations/4291308184570152295"
+        # startTime: "2024-01-19T05:39:20.976-08:00"
+        # status: "RUNNING"
+        # targetId: "2381037435754104167"
+        # targetLink: "https://www.googleapis.com/compute/v1/projects/gglobo-dbaas-tsr-dev/zones/us-east1-d/disks/testedbaas170567152663-data1"
+        # user: "442547273011-compute@developer.gserviceaccount.com"
+        # zone: "https://www.googleapis.com/compute/v1/projects/gglobo-dbaas-tsr-dev/zones/us-east1-d"
+        # }
+        volume.identifier = disk_create.get('targetId')
         volume.resource_id = disk_name
         volume.path = "/dev/disk/by-id/google-%s" % \
             self.get_device_name(disk_name)
